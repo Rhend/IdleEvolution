@@ -5,4 +5,4 @@
 [resource]
 script = ExtResource("1")
 id = "pool_defaut"
-creature_ids = Array[String](["creature_foret_surface", "creature_marecage_surface", "creature_montagne_surface"])
+creature_ids = Array[String](["creature_flamebot", "creature_workbot"])

@@ -23,7 +23,7 @@
 # ============================================================
 extends Node
 
-const LIEUX: Array[String] = ["biome_foret", "biome_marecage", "biome_montagne"]
+const LIEUX: Array[String] = ["biome_usine"]
 const PALIERS: Array[String] = ["palier_peripherie", "palier_enceinte", "palier_noyau"]
 
 func _ready() -> void:

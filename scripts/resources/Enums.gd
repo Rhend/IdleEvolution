@@ -16,7 +16,6 @@ class EntityType:
 	const INGREDIENT    := "ingredient"
 	const FRAGMENT      := "fragment"
 	const RESOURCE      := "resource"
-	const RECIPE        := "recipe"
 	const BUILDING      := "building"
 	const FORGE_TREE    := "forge_tree"
 	# Pseudo-type : le Village n'est pas dans GameData.entities, mais son

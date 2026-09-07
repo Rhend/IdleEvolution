@@ -10,8 +10,6 @@ nom_affichage_fr = "Palissade"
 nom_affichage_en = "Palisade"
 lore_fr = "Des pieux dressés et des remparts de fortune. Ce qui protège le village endurcit aussi celui qui en part."
 lore_en = "Raised stakes and makeshift ramparts. What shields the village also hardens the one who leaves it."
-biome_principal_id = "biome_montagne"
-biomes_additionnels = Array[String](["biome_foret", "biome_marecage"])
 gele = false
 bonus_par_palier = {
 0: [{"channel": "def_pct", "value": 0.05}],

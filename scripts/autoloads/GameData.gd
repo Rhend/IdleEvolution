@@ -127,7 +127,6 @@ func _load_all_entities() -> void:
 	_load_tres_folder("res://data/benedictions/",    Enums.EntityType.BENEDICTION)
 	# Données statiques JSON — chargées EN PREMIER pour que les .tres les écrasent si même ID
 	_load_data_from_folder("res://data/resources/", Enums.EntityType.RESOURCE)
-	_load_data_from_folder("res://data/forge/",     Enums.EntityType.RECIPE)
 	# Données statiques .tres (sans progression) — écrasent les resources/ si ID partagé
 	_load_tres_folder("res://data/ingredients/", Enums.EntityType.INGREDIENT, false)
 	_load_tres_folder("res://data/fragments/",   Enums.EntityType.FRAGMENT,   false)
@@ -238,7 +237,7 @@ func _validate_entities() -> void:
 		# Toute entité affichée à l'écran doit avoir un nom.
 		# `name` est accepté en repli (convention des passifs, ex-JSON), et les
 		# placeholders pas encore débloqués (est_debloque = false) sont ignorés.
-		if etype not in [Enums.EntityType.RESOURCE, Enums.EntityType.RECIPE, Enums.EntityType.FORGE_TREE] \
+		if etype not in [Enums.EntityType.RESOURCE, Enums.EntityType.FORGE_TREE] \
 				and e.get("est_debloque", true) \
 				and str(e.get("nom_affichage_fr", "")) == "" \
 				and str(e.get("name", "")) == "":

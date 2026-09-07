@@ -2,9 +2,15 @@ extends Node
 # Tests du système de drop de ressources (Chantier 3) :
 #   • constantes de taux (fréquent 60 % en quantité 1-4, rare par palier non linéaire),
 #   • clamp du taux rare hors bornes,
-#   • mapping biome → (ressource fréquente, rare) en donnée + ressources chargées,
 #   • taux empiriques (statistique seedée) + INDÉPENDANCE des deux tirages,
 #   • boss (créature Unique) → aucun drop de farm.
+#
+# ⚠ Le sous-test « mapping biome → ressources » (3 biomes distincts, chacun sa
+# paire fréquente/rare) a été RETIRÉ le 07/09/2026 (table rase du bestiaire
+# Dark Fantasy, pivot Cyberpunk) : un seul Lieu réel existe désormais (Usine),
+# la comparaison à 3 mappings n'a plus de sens tant que d'autres Lieux ne sont
+# pas designés. Le système lui-même (BiomeData.ressource_frequente_id/rare_id)
+# reste inchangé et testé ailleurs (TestButin).
 
 var _results: Array = []
 
@@ -33,7 +39,6 @@ func _run_all() -> void:
 	print("\n=== TEST DROP RESSOURCES (Chantier 3) ===\n")
 	_test_constants()
 	_test_rate_clamp()
-	_test_biome_mapping()
 	_test_rates_and_independence()
 	_test_boss_excluded()
 
@@ -59,26 +64,8 @@ func _test_rate_clamp() -> void:
 	_assert(is_equal_approx(Balance.rare_drop_rate(4), 0.30),  "tier 4 → 0.30")
 	_assert(is_equal_approx(Balance.rare_drop_rate(99), 0.30), "tier au-delà → T4 (0.30)")
 
-func _test_biome_mapping() -> void:
-	print("\n[TEST 3] Mapping biome → ressources (donnée) + ressources chargées")
-	var expected := {
-		"biome_foret":    ["res_fourrure", "res_venin"],
-		"biome_marecage": ["res_slime",    "res_ecaille"],
-		"biome_montagne": ["res_pierre",   "res_mineral_fer"],
-	}
-	for biome_id in expected:
-		var b := GameData.get_entity(biome_id)
-		var freq: String = str(b.get("ressource_frequente_id", ""))
-		var rare: String = str(b.get("ressource_rare_id", ""))
-		_assert(freq == expected[biome_id][0] and rare == expected[biome_id][1],
-				"%s → (%s, %s)" % [biome_id, expected[biome_id][0], expected[biome_id][1]],
-				"obtenu (%s, %s)" % [freq, rare])
-		# Les deux ressources doivent exister comme entités chargées.
-		_assert(not GameData.get_entity(freq).is_empty(), "ressource %s chargée" % freq)
-		_assert(not GameData.get_entity(rare).is_empty(), "ressource %s chargée" % rare)
-
 func _test_rates_and_independence() -> void:
-	print("\n[TEST 4] Taux empiriques + indépendance (statistique seedée)")
+	print("\n[TEST 3] Taux empiriques + indépendance (statistique seedée)")
 	seed(20260620)
 	var n := 40000
 	for tier in [0, 2, 4]:
@@ -118,11 +105,11 @@ func _assert_qty_range(qty: int) -> void:
 		_assert(false, "quantité fréquente hors [1, 4]", "obtenu %d" % qty)
 
 func _test_boss_excluded() -> void:
-	print("\n[TEST 5] Boss (créature Unique) → aucun drop de farm")
-	AdventureSystem.current_biome_id = "biome_foret"
+	print("\n[TEST 4] Boss (créature Unique) → aucun drop de farm")
+	AdventureSystem.current_biome_id = "biome_usine"
 	GameData.player["resources"] = {}
 	# Boss T4 : malgré le palier max, aucune ressource ne doit être créditée.
-	AdventureSystem._drop_biome_resources({"est_unique": true, "maitrise_actuelle": 4, "name": "Oscar"})
+	AdventureSystem._drop_biome_resources({"est_unique": true, "maitrise_actuelle": 4, "name": "Boss de test"})
 	_assert(GameData.player["resources"].is_empty(),
 			"aucune ressource créditée pour un boss",
 			"obtenu %s" % str(GameData.player["resources"]))

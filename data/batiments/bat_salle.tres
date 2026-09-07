@@ -10,8 +10,6 @@ nom_affichage_fr = "Salle d'entraînement"
 nom_affichage_en = "Training Hall"
 lore_fr = "Mannequins de bois et poids de pierre. La sueur d'aujourd'hui est la puissance de demain."
 lore_en = "Wooden dummies and stone weights. Today's sweat is tomorrow's power."
-biome_principal_id = "biome_montagne"
-biomes_additionnels = Array[String](["biome_foret", "biome_marecage"])
 gele = false
 bonus_par_palier = {
 0: [{"channel": "atk_pct", "value": 0.03}],

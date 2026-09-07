@@ -5,14 +5,12 @@
 [resource]
 script = ExtResource("1")
 id = "equipment_arme"
-nom_affichage_fr = "Lame de Pierre"
-lore_fr = "Taillee dans le basalte de la montagne, elle garde le tranchant mieux que l'acier. Les premiers habitants l'utilisaient pour des rituels dont le sens s'est perdu."
-lore_en = "Carved from mountain basalt, it holds an edge better than steel. The first inhabitants used it for rituals whose meaning is lost."
-nom_affichage_en = "Stone Blade"
-noms_par_palier_fr = {0: "Lame de Pierre", 1: "Lame de Silex", 2: "Lame Trempée au Granit", 3: "Lame des Hauts-Pics", 4: "Lame du Titan Endormi", 5: "Lame du Cœur de Gorlab"}
-noms_par_palier_en = {0: "Stone Blade", 1: "Flint Blade", 2: "Granite-Forged Blade", 3: "Highpeak Blade", 4: "Blade of the Sleeping Titan", 5: "Blade of Gorlab's Heart"}
+nom_affichage_fr = "Arme"
+lore_fr = ""
+lore_en = ""
+nom_affichage_en = "Weapon"
 slot = 0
-biome_source_id = "biome_montagne"
+biome_source_id = "biome_usine"
 maitrise_actuelle = 0
 est_debloque = false
 stats_par_palier = {0: {"atk": 3}, 1: {"atk": 7, "def": 1}, 2: {"atk": 14, "def": 2}}

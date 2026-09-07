@@ -151,7 +151,7 @@ func _test_survie_au_rechargement() -> void:
 	print("\n[TEST 4] Save + reload : l'équipement de départ n'est PAS repris")
 	# Biomes à Commun (T0) : l'ancien rattrapage reconcile aurait DÉSÉQUIPÉ
 	# ici (« biome < Peu Commun → équipement repris ») — il est supprimé.
-	_assert(int(GameData.get_entity("biome_montagne").get("maitrise_actuelle", 0)) == 0,
+	_assert(int(GameData.get_entity("biome_usine").get("maitrise_actuelle", 0)) == 0,
 			"biome de l'arme à Commun (précondition du piège reconcile)")
 	SaveManager.sauvegarder_maintenant()
 	_tout_desequiper()

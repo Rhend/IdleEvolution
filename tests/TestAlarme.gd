@@ -20,13 +20,11 @@ const SAUV := SaveManager.SAVE_PATH
 const META := SaveManager.META_PATH
 const FICHIERS: Array[String] = [SAUV, SAUV + ".bak", META, META + ".bak"]
 
+# Table rase du bestiaire Dark Fantasy (07/09/2026) : l'Usine est le SEUL
+# Lieu réel à ce jour — un seul Lieutenant mappé (les autres reviendront
+# avec les futurs Lieux).
 const LIEUTENANTS_TRES := [
-	"res://data/expedition/lieutenants/lieutenant_foret.tres",
-	"res://data/expedition/lieutenants/lieutenant_marecage.tres",
-	"res://data/expedition/lieutenants/lieutenant_montagne.tres",
-	"res://data/expedition/lieutenants/lieutenant_colline.tres",
-	"res://data/expedition/lieutenants/lieutenant_ville_fantome.tres",
-	"res://data/expedition/lieutenants/lieutenant_cimetiere.tres",
+	"res://data/expedition/lieutenants/lieutenant_usine.tres",
 ]
 
 var _results: Array = []
@@ -205,18 +203,18 @@ func _bouton_contenant(racine: Node, motif: String) -> Button:
 # ─── 1. Données du chantier ─────────────────────────────────
 
 func _test_donnees() -> void:
-	print("[TEST 1] Données : 6 Lieutenants mappés, palier Assaut, config Alarme")
+	print("[TEST 1] Données : 1 Lieutenant mappé (Usine, seul Lieu réel), palier Assaut, config Alarme")
 	var dest: ExpeDestinationsData = load("res://data/expedition/destinations.tres")
-	_assert(dest.lieutenants_par_lieu.size() == 6, "6 Lieutenants mappés (3 Lieux + 3 secondaires d'avance)")
+	_assert(dest.lieutenants_par_lieu.size() == 1, "1 Lieutenant mappé (Usine — les autres Lieux n'existent pas encore)")
 	for chemin: String in LIEUTENANTS_TRES:
 		var l: CombattantCtbData = load(chemin)
 		if l == null or l.pv_max <= 0.0:
 			_fail("Lieutenant lisible : " + chemin)
 			return
-	_ok("les 6 .tres de Lieutenants se chargent (stats non vides)")
-	_assert(dest.lieutenant_pour("biome_foret") != null
-			and dest.lieutenant_pour("biome_foret").id == "lieutenant_foret",
-			"lieutenant_pour(biome_foret) → lieutenant_foret")
+	_ok("le .tres de Lieutenant se charge (stats non vides)")
+	_assert(dest.lieutenant_pour("biome_usine") != null
+			and dest.lieutenant_pour("biome_usine").id == "lieutenant_usine",
+			"lieutenant_pour(biome_usine) → lieutenant_usine")
 	_assert(dest.lieutenant_pour("lieu_inconnu") == null,
 			"lieu non mappé → null (l'Assaut ne se lance pas)")
 	var pa: PalierProfondeurData = load("res://data/expedition/palier_assaut.tres")
@@ -276,10 +274,10 @@ func _test_option_assaut_panneau() -> void:
 	_reset_etat()
 	get_tree().root.size = Vector2i(1280, 720)   # règle projet : fenêtre headless 64×64
 
-	GameData.marquer_strate_completee("biome_foret", "palier_peripherie")
-	GameData.marquer_strate_completee("biome_foret", "palier_enceinte")
+	GameData.marquer_strate_completee("biome_usine", "palier_peripherie")
+	GameData.marquer_strate_completee("biome_usine", "palier_enceinte")
 	var p1 := ExpeLancementPanel.new()
-	p1.lieu_id = "biome_foret"
+	p1.lieu_id = "biome_usine"
 	add_child(p1)
 	await get_tree().process_frame
 	_assert(_bouton_contenant(p1, "ASSAUT") == null,
@@ -287,9 +285,9 @@ func _test_option_assaut_panneau() -> void:
 	_assert(_bouton_contenant(p1, "PARTIR") != null, "bouton PARTIR toujours là")
 	p1.queue_free()
 
-	GameData.marquer_strate_completee("biome_foret", "palier_noyau")
+	GameData.marquer_strate_completee("biome_usine", "palier_noyau")
 	var p2 := ExpeLancementPanel.new()
-	p2.lieu_id = "biome_foret"
+	p2.lieu_id = "biome_usine"
 	add_child(p2)
 	await get_tree().process_frame
 	var btn := _bouton_contenant(p2, "ASSAUT")
@@ -307,7 +305,7 @@ func _test_option_assaut_panneau() -> void:
 func _test_assaut_carte_boss() -> void:
 	print("\n[TEST 4] Assaut : 1 étage, Boss à la place de la Fin d'étage, visible")
 	_reset_etat()
-	var r := _run("biome_foret", 44, true)
+	var r := _run("biome_usine", 44, true)
 	_assert(r.nb_etages_effectif() == 1, "1 seul étage (config inchangée par ailleurs)")
 	var fin := r.carte.noeud(r.carte.fin_id)
 	_assert(fin.type == Enums.TypeNoeud.BOSS, "nœud de Fin d'étage devenu BOSS")
@@ -317,7 +315,7 @@ func _test_assaut_carte_boss() -> void:
 		if nd.type == Enums.TypeNoeud.BOSS:
 			nb_boss += 1
 	_assert(nb_boss == 1, "un SEUL nœud Boss sur la carte")
-	var normale := _run("biome_foret", 44)
+	var normale := _run("biome_usine", 44)
 	var aucun_boss := true
 	for nd in normale.carte.noeuds:
 		if nd.type == Enums.TypeNoeud.BOSS:
@@ -329,7 +327,7 @@ func _test_assaut_carte_boss() -> void:
 func _test_assaut_sans_extraction() -> void:
 	print("\n[TEST 5] Assaut : aucune extraction — victoire ou défaite, rien d'autre")
 	_reset_etat()
-	var r := _run("biome_foret", 55, true)
+	var r := _run("biome_usine", 55, true)
 	r.extraire()
 	_assert(not r.est_terminee, "extraire() inopérant (choix jamais ouvert)")
 	var choix_vu := [false]
@@ -348,7 +346,7 @@ func _test_assaut_sans_extraction() -> void:
 func _test_composition_boss() -> void:
 	print("\n[TEST 6] Composition du combat de boss : Lieutenant + 2 sbires du pool")
 	_reset_etat()
-	var r := _run("biome_foret", 66, true)
+	var r := _run("biome_usine", 66, true)
 	# Le combat du BOSS est le DERNIER combat de l'assaut (la victoire y met
 	# fin) : capturer chaque moteur, le dernier est le bon.
 	var capture: Array = [null]
@@ -382,13 +380,13 @@ func _test_premier_kill_et_round_trip() -> void:
 		signaux.append({"lieu": lieu, "premier": premier})
 	EventBus.lieutenant_vaincu.connect(cb)
 
-	var r := _run("biome_foret", 77, true)
+	var r := _run("biome_usine", 77, true)
 	_boucler(r)
 	_assert(r.est_terminee and not r.defaite, "assaut gagné (précondition)")
-	_assert(GameData.lieutenant_vaincu("biome_foret"), "slot du Lieu rempli")
+	_assert(GameData.lieutenant_vaincu("biome_usine"), "slot du Lieu rempli")
 	_assert(GameData.nb_lieutenants_vaincus() == 1, "Alarme 1/6")
 	_assert(signaux.size() == 1 and signaux[0]["premier"] == true
-			and signaux[0]["lieu"] == "biome_foret",
+			and signaux[0]["lieu"] == "biome_usine",
 			"signal lieutenant_vaincu(lieu, premier=true) émis une fois")
 	var recap := r._recap(false)
 	_assert(bool(recap["premier_kill"]) and str(recap["lieutenant_id"]) == "lieutenant_test"
@@ -402,7 +400,7 @@ func _test_premier_kill_et_round_trip() -> void:
 	GameData.player["lieutenants_vaincus"] = {}
 	GameData.player["expe_completions"] = {}
 	SaveManager.recharger()
-	_assert(GameData.lieutenant_vaincu("biome_foret"),
+	_assert(GameData.lieutenant_vaincu("biome_usine"),
 			"slot d'Alarme survivant au round-trip disque")
 
 # ─── 8. Re-kill : pas de re-slot, récompenses normales ──────
@@ -410,12 +408,12 @@ func _test_premier_kill_et_round_trip() -> void:
 func _test_rekill() -> void:
 	print("\n[TEST 8] Re-kill : pas de re-slot, XP/Euren normaux")
 	_reset_etat()
-	GameData.player["lieutenants_vaincus"] = {"biome_foret": true}
+	GameData.player["lieutenants_vaincus"] = {"biome_usine": true}
 	var signaux: Array = []
 	var cb := func(_lieu: String, premier: bool) -> void:
 		signaux.append(premier)
 	EventBus.lieutenant_vaincu.connect(cb)
-	var r := _run("biome_foret", 88, true)
+	var r := _run("biome_usine", 88, true)
 	_boucler(r)
 	_assert(r.est_terminee and not r.defaite, "re-assaut gagné (précondition)")
 	_assert(GameData.nb_lieutenants_vaincus() == 1, "toujours 1/6 : pas de re-slot")
@@ -501,14 +499,14 @@ func _test_game_over_annule_kill() -> void:
 	SaveManager.sauvegarder_maintenant()
 	SaveManager.suspendre_ecritures()
 	# Pendant la run : kill (comme le ferait la victoire de boss)...
-	GameData.marquer_lieutenant_vaincu("biome_foret")
+	GameData.marquer_lieutenant_vaincu("biome_usine")
 	_assert(GameData.nb_lieutenants_vaincus() == 1, "kill marqué pendant la run")
 	# ... puis run PERDUE → séquence Game Over : reprise sans flush + rechargement.
 	SaveManager.reprendre_ecritures(false)
 	SaveManager.recharger()
 	_assert(GameData.nb_lieutenants_vaincus() == 0,
 			"rechargement → kill annulé (l'assaut perdu n'a pas eu lieu)")
-	_assert(not GameData.lieutenant_vaincu("biome_foret"), "slot du Lieu bien vide")
+	_assert(not GameData.lieutenant_vaincu("biome_usine"), "slot du Lieu bien vide")
 
 # ─── 12. 6/6 : l'alarme sonne (une seule fois) ──────────────
 

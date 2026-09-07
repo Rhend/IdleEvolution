@@ -135,8 +135,7 @@ func _chemin_vers(run: ExpeRun, cible: int) -> Array[int]:
 # atk/def/vit/crit_* inchangés — aucun rééquilibrage.
 func _test_conversion_bestiaire() -> void:
 	print("[TEST] Conversion bestiaire → combattant CTB (stats telles quelles)")
-	for cid in ["creature_foret_surface", "creature_marecage_surface",
-			"creature_montagne_surface", "creature_gorlab"]:
+	for cid in ["creature_flamebot", "creature_workbot"]:
 		var d := CtbPont.combattant_depuis_entite(cid)
 		if d == null:
 			_fail("conversion %s" % cid, "entité introuvable")

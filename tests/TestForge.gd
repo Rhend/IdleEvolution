@@ -115,12 +115,12 @@ func _test_keystone_ingredient() -> void:
 	GameData.player["resources"] = {}
 	_assert(not ForgeSystem.can_buy_node("equipment_arme", "arme_s2_fendoir"),
 			"sans ingrédient rare → keystone non achetable")
-	GameData.player["resources"] = {"res_mineral_fer": 3}
+	GameData.player["resources"] = {"res_puce": 3}
 	_assert(ForgeSystem.can_buy_node("equipment_arme", "arme_s2_fendoir"),
 			"avec 3 ingrédients rares → achetable")
 	ForgeSystem.buy_node("equipment_arme", "arme_s2_fendoir")
 	_assert(ForgeSystem.node_owned("equipment_arme", "arme_s2_fendoir"), "keystone acquis")
-	_assert(int(GameData.player["resources"].get("res_mineral_fer", 0)) == 0,
+	_assert(int(GameData.player["resources"].get("res_puce", 0)) == 0,
 			"3 ingrédients consommés", str(GameData.player["resources"]))
 	_assert(ForgeSystem.points("equipment_arme") == 410, "90 pts consommés (500→410)",
 			"obtenu %d" % ForgeSystem.points("equipment_arme"))

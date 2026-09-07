@@ -33,10 +33,10 @@ func _test_xp_produced() -> void:
 # l'écart entre son palier et celui de la cible. Coef créature ×1.0, héros ×0.05.
 func _test_distribution_no_gap() -> void:
 	print("\n[TEST] Distribution sans écart de palier (produced × coef)")
-	var id := "creature_foret_surface"
+	var id := "creature_flamebot"
 	var e  := GameData.get_entity(id)
 	if e.is_empty():
-		print("  ECHEC : 'creature_foret_surface' introuvable")
+		print("  ECHEC : 'creature_flamebot' introuvable")
 		return
 	# Même montant produit donné à la créature : reçoit le plein montant (coef 1.0),
 	# indépendamment du palier de la cible (pas de gap).
@@ -59,7 +59,7 @@ func _test_distribution_no_gap() -> void:
 # est perdu. Coût T0→T1 créature = 100, cap 20% → plafond 120.
 func _test_buffer_cap() -> void:
 	print("\n[TEST] Buffer d'évolution borné (excédent perdu)")
-	var id := "creature_foret_surface"
+	var id := "creature_flamebot"
 	var e  := GameData.get_entity(id)
 	if e.is_empty():
 		return
@@ -80,10 +80,10 @@ func _test_buffer_cap() -> void:
 func _test_evolution() -> void:
 	print("\n[TEST] Évolution d'entité")
 
-	var test_id = "creature_foret_surface"
+	var test_id = "creature_flamebot"
 	var entity  = GameData.get_entity(test_id)
 	if entity.is_empty():
-		print("  ECHEC : entité 'creature_foret_surface' introuvable")
+		print("  ECHEC : entité 'creature_flamebot' introuvable")
 		return
 
 	# Biome non bridant + remise à zéro.

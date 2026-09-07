@@ -14,14 +14,6 @@ const EQUIP_SLOTS: Array = [
 	["armure", "🛡",  "equipment_armure", "Armure"],
 ]
 
-# Biome où chaque slot livre son équipement (B7 — placeholder informatif).
-# Arme → Montagne · Armure → Marécage · Anneau → Forêt.
-const SLOT_BIOME: Dictionary = {
-	"arme":   "biome_montagne",
-	"armure": "biome_marecage",
-	"anneau": "biome_foret",
-}
-
 # Point d'entrée : peuple host.rp_content avec la fiche du héros actif.
 static func build(host: Village) -> void:
 	var c        := GameData.get_entity("hero")
@@ -141,8 +133,7 @@ static func build(host: Village) -> void:
 			equip_body.add_child(_equip_slot_card(host, slot_key, slot_icon,
 					slot_name, equip_id, equip, tcolor))
 		else:
-			equip_body.add_child(_equip_placeholder_card(slot_icon, slot_name,
-					SLOT_BIOME.get(slot_key, "") as String))
+			equip_body.add_child(_equip_placeholder_card(slot_icon, slot_name))
 
 	# ── PASSIFS ───────────────────────────────────────────────
 	# Même règle que l'Équipement : la section n'apparaît qu'avec son
@@ -207,8 +198,12 @@ static func _build_ingredients(host: Village, tcolor: Color) -> void:
 	var body := ingr_sec["body"] as VBoxContainer
 	body.add_theme_constant_override("separation", 4)
 
-	# Biomes connus d'abord (ordre canonique), inconnus ensuite.
-	const BIOME_ORDER := ["biome_montagne", "biome_foret", "biome_marecage"]
+	# Biomes connus d'abord (ordre canonique), inconnus ensuite. VIDE depuis
+	# le 07/09/2026 (table rase du bestiaire Dark Fantasy) : aucun ingrédient
+	# n'existe plus tant que la nouvelle DA n'en a pas livré — cette fonction
+	# entière reste inerte (`by_biome` vide) jusque-là, l'ordre n'a pas encore
+	# de sens à définir.
+	const BIOME_ORDER: Array[String] = []
 	var ordered: Array = []
 	for b in BIOME_ORDER:
 		if by_biome.has(b):
@@ -476,7 +471,7 @@ static func _attach_stat_tooltip(grp: Control, title: String, body: String, colo
 
 # Placeholder d'un slot dont l'équipement n'est pas encore livré (B7) : carte
 # grisée avec icône + slot + « À débloquer », tooltip indiquant le biome source.
-static func _equip_placeholder_card(slot_icon: String, slot_name: String, biome_id: String) -> Control:
+static func _equip_placeholder_card(slot_icon: String, slot_name: String) -> Control:
 	var card := PanelContainer.new()
 	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	card.add_theme_stylebox_override("panel", UIHelpers.card_style(UIColors.TEXT_MUTED, 0.03, 0.18, 1, 6))
@@ -498,12 +493,9 @@ static func _equip_placeholder_card(slot_icon: String, slot_name: String, biome_
 
 	row.add_child(UIHelpers.label("🔒 " + Translations.T("hero.equip.placeholder"), 11, UIColors.TEXT_MUTED))
 
-	var biome := GameData.get_entity(biome_id)
-	var bname := Translations.entity_name(biome, biome_id) if not biome.is_empty() else biome_id
-	var bc := UIColors.tier_color(int(biome.get("maitrise_actuelle", 0))) if not biome.is_empty() else UIColors.TEXT_MUTED
 	UIHelpers.add_hover_feedback(card)
 	UIHelpers.register_tooltip(card, slot_name,
-			Translations.T("hero.equip.placeholder_tt") % bname, bc)
+			Translations.T("hero.equip.placeholder_tt"), UIColors.TEXT_MUTED)
 	return card
 
 # Carte d'équipement — DA commune entity_xp_card (même pattern que passifs/biomes).

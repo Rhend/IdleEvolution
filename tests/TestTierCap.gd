@@ -72,9 +72,9 @@ func _test_effective_max_tier() -> void:
 	print("\n[TEST 2] effective_max_tier ne dépasse jamais le plafond")
 	var cap := Balance.GLOBAL_MAX_TIER
 	# Une créature dont le biome est à fond → plafond de biome élevé, doit rester borné.
-	var creature := GameData.get_entity("creature_foret_surface")
+	var creature := GameData.get_entity("creature_flamebot")
 	if creature.is_empty():
-		_fail("creature_foret_surface introuvable")
+		_fail("creature_flamebot introuvable")
 		return
 	var biome := GameData.get_entity(str(creature.get("biome_id", "")))
 	var biome_tier_save := int(biome.get("maitrise_actuelle", 0))
@@ -85,10 +85,10 @@ func _test_effective_max_tier() -> void:
 
 func _test_xp_stops_at_cap() -> void:
 	print("\n[TEST 3] Aucune XP de Maîtrise gagnée au plafond")
-	var id := "creature_foret_surface"
+	var id := "creature_flamebot"
 	var e := GameData.get_entity(id)
 	if e.is_empty():
-		_fail("creature_foret_surface introuvable")
+		_fail("creature_flamebot introuvable")
 		return
 	e["maitrise_actuelle"] = Balance.GLOBAL_MAX_TIER
 	e["xp_maitrise_actuelle"] = 0.0
@@ -98,7 +98,7 @@ func _test_xp_stops_at_cap() -> void:
 
 func _test_xp_flows_below_cap() -> void:
 	print("\n[TEST 4] L'XP s'accumule encore en dessous du plafond")
-	var id := "creature_foret_surface"
+	var id := "creature_flamebot"
 	var e := GameData.get_entity(id)
 	e["maitrise_actuelle"] = 0
 	e["xp_maitrise_actuelle"] = 0.0
@@ -108,7 +108,7 @@ func _test_xp_flows_below_cap() -> void:
 
 func _test_evolution_blocked_at_cap() -> void:
 	print("\n[TEST 5] Évolution impossible au plafond")
-	var id := "creature_foret_surface"
+	var id := "creature_flamebot"
 	var e := GameData.get_entity(id)
 	e["maitrise_actuelle"] = Balance.GLOBAL_MAX_TIER
 	e["xp_maitrise_actuelle"] = 999999.0  # XP largement suffisante
@@ -119,7 +119,7 @@ func _test_evolution_blocked_at_cap() -> void:
 
 func _test_evolution_works_below_cap() -> void:
 	print("\n[TEST 6] Évolution possible jusqu'au plafond")
-	var id := "creature_foret_surface"
+	var id := "creature_flamebot"
 	var e := GameData.get_entity(id)
 	# S'assure que le biome ne bride pas la créature sous le plafond.
 	var biome := GameData.get_entity(str(e.get("biome_id", "")))
@@ -136,7 +136,7 @@ func _test_evolution_works_below_cap() -> void:
 
 func _test_hall_familiarity_capped() -> void:
 	print("\n[TEST 7] Familiarité du Hall plafonnée + XP stoppée")
-	var id := "creature_foret_surface"
+	var id := "creature_flamebot"
 	GameData.player.get("bestiary", {}).erase(id)
 	GameData.record_encounter(id, "Rat", Enums.EntityType.CREATURE, "biome_foret", 100000.0)
 	var entry: Dictionary = GameData.player.get("bestiary", {}).get(id, {})

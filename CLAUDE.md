@@ -139,21 +139,13 @@ règle intactes) ; réglages `data/expedition/mecaniques_biomes.tres`
 (`MecaniquesBiomesData`) appliqués par ExpeRun à chaque combat ; annonce à
 l'intro de combat + ligne au panneau de lancement. BiomeMechanics (ancienne
 boucle) n'est PAS réutilisé.
-CHANTIER 17 (Lieux secondaires, acté 07/2026) : Collines / Ville Fantôme /
-Cimetière EXISTENT (`data/biomes/`, `est_decouvert=false`) et sont RÉVÉLÉS
-par l'ouverture des voies 2-4 (`data/progression/voies.tres`
-(`VoiesConfigData`), appliqué par `GameData.ouvrir_voie_suivante` — flag
-persisté, reculé par le Game Over avec le compteur ; VoiesPanel ANNONCE le
-Lieu avant l'ouverture). Identité héritée de la branche parente (arbre
-Forêt→Collines, Montagne→Ville Fantôme, Marécage→Cimetière —
-`biome_secondaire_id` + mécanique forte héritée, provisoire) ; ressources
-de butin propres (dent_gobelin/defense_sanglier, herbe_magique/ectoplasme,
-os_corail/relique_funeraire) ; slots Ceinture/Bouclier/Talisman (donnée
-prête, hook gelé) ; ennemis = pool_defaut (statu quo VS), Lieutenants déjà
-mappés. Les 4 zones `biome_montagne` du gabarit ont été DIFFÉRENCIÉES par
-leur décor (cimetière→Cimetière, usine→Ville Fantôme, casse→Collines, bloc
-central reste Montagne — cellules I13/I49/AZ15 de la feuille Carte,
-instantané re-baké).
+⚠ CHANTIER 17 (Lieux secondaires) SUPPRIMÉ le 07/09/2026 (table rase du
+bestiaire Dark Fantasy, voir « Biomes / Lieux » plus bas) : Collines / Ville
+Fantôme / Cimetière n'existent plus, `data/progression/voies.tres` est vide,
+`TestLieuxSecondaires` a été retiré. Le mécanisme lui-même (une voie peut
+révéler un Lieu, `VoiesConfigData.lieux_par_voie`) reste en place et
+générique, prêt pour de futurs Lieux secondaires — aucun code à réécrire, il
+suffira de remplir le dict.
 CHANTIER 16 (compétences, acté 07/2026) : l'action COMPETENCE est RÉELLE —
 `CompetenceCtbData` portées par le COMBATTANT (`CombattantCtbData.
 competences` ; l'IA ne les joue jamais → runs auto/simulateur inchangés),
@@ -294,7 +286,6 @@ godot --headless --path . res://tests/TestHoloPicking.tscn      # picking des zo
 godot --headless --path . res://tests/TestButin.tscn            # butin de matériaux d'expédition (23)
 godot --headless --path . res://tests/TestMecaniquesBiomes.tscn # mécaniques fortes de biome en CTB (21)
 godot --headless --path . res://tests/TestCompetences.tscn      # compétences du héros en CTB + geste d'attaque (29)
-godot --headless --path . res://tests/TestLieuxSecondaires.tscn # Lieux secondaires révélés par les voies (50)
 godot --headless --path . res://tests/TestShowRoom.tscn         # vitrine Spine : registre, aller-retour QG, éclairage, costumes de Relic, échelle, bake des silhouettes, sens d'export (104)
 godot --headless --path . res://tests/TestNeonsCite.tscn        # enseignes néon vivantes : bake à jour, tracés sur la lumière, cycle, traînée, montage (59)
 
@@ -370,29 +361,43 @@ godot --headless --path . --quit-after 30
   dessinés BRUTS (lignes plates sans shader néon) pour calibrer la DA. Le néon des
   props = `_mat_prop` (émission moitié des enseignes, sans cœur blanc).
 
-## Biomes (VS initiaux)
+## Biomes / Lieux
 
-| Biome | Mécanique forte (Rare+) | Slot équipement | Unique |
+⚠ **Table rase du 07/09/2026** (pivot Cyberpunk pris en charge de plus en plus
+par Christophe) : tout le bestiaire et les Lieux « Dark Fantasy » de l'ancien
+jeu (Forêt Sombre/Marécage Putride/Montagne + secondaires Collines/Ville
+Fantôme/Cimetière, leurs 9 créatures, leurs 6 Lieutenants, leurs ingrédients/
+fragments/passifs uniques/pièges/bénédictions/ressources) ont été SUPPRIMÉS —
+plus aucune trace en `data/`. Seul un Lieu réel existe désormais :
+
+| Lieu | Mécanique forte | Ressource fréquente | Ressource rare |
 |---|---|---|---|
-| Forêt Sombre (`biome_foret`) | ambush (1er ennemi frappe avant) | Anneau | Oscar |
-| Marécage Putride (`biome_marecage`) | poison (coups héros empoisonnent) | Armure | Cavalier Sans Tête |
-| Montagne (`biome_montagne`) | endurcissement (dégâts héros −20 %) | Arme | Gorlab |
+| Usine (`biome_usine`) | aucune assignée pour l'instant | Ferraille (`res_ferraille`) | Puce (`res_puce`) |
 
-Progression d'un biome : T0 découverte → **T1 Peu Commun : son équipement est
-obtenu (à T0) et auto-équipé** (`Balance.EQUIPMENT_UNLOCK_BIOME_TIER`,
-`GameData.unlock_biome_equipment`) → T2 Rare : mécanique forte → T4 Légendaire :
-biome secondaire révélé.
-⚠ Chantier 12 : « Évoluer biomes » est SUPPRIMÉ (les Lieux n'évoluent plus,
-décision actée) — cette échelle de jalons est DE FAIT gelée. ⚠ Chantier 13 :
-le joueur ne démarre PLUS sans équipement — l'équipement Commun complet est
-présent dès la partie neuve (dotation `equipement_depart.tres`, 3 slots
-réels du VS) et progresse par la Forge (voie 1). La mécanique
-`entity_evolved` et le hook `unlock_biome_equipment` restent en place
-(`reconcile_equipment_unlocks` supprimé).
+Bestiaire de l'Usine (`data/creatures/`) : `creature_flamebot` et
+`creature_workbot` — les fiches de STATS du pont bestiaire→CTB (ancien modèle
+`CreatureData`/GameData, distinct des fiches Spine VISUELLES de
+`SpinePersonnagesData` documentées plus haut, non reliées à ce jour). Pool
+d'expédition unique `data/expedition/pool_defaut.tres` (déjà « provisoire »
+avant la table rase — juste rebranché sur ces deux ids). Lieutenant unique
+`lieutenant_usine` (`data/expedition/lieutenants/`).
+⚠ **Il y aura 6 Lieux au total à terme** (Rhend) : en attendant que les 5
+autres soient designés, TOUS les nœuds de la HoloMap pointent vers l'Usine
+(l'auteur du gabarit Excel gère ce mapping lui-même, rien à faire côté code
+— voir plus bas, aucun id de biome n'est en dur dans le lecteur HoloMap).
+`data/progression/voies.tres` (`lieux_par_voie`) est VIDE : les voies 2-4 se
+comportent comme 5-6 (placeholder) tant qu'aucun Lieu secondaire n'existe.
+Équipement de départ (arme/anneau/armure, VS ch.13) conservé mais RENOMMÉ
+neutre (« Arme »/« Anneau »/« Armure », lore vidé). ⚠ `EquipmentData.
+biome_source_id` est VIVANT (piège de la table rase : d'abord vidé par
+erreur) — `ForgeSystem.node_ingredient_cost` s'en sert pour trouver
+`ressource_rare_id` du Lieu source et facturer l'ingrédient d'un keystone ;
+les 3 slots pointent maintenant sur `biome_usine` (Ferraille/Puce).
 
-Biomes secondaires (révélés au Légendaire du parent) : Collines, Ville Fantôme, Cimetière.
-Ambiances visuelles : presets dans `BiomeBackground.PRESETS` (+ `accent_for_biome()`
-utilisé par le séparateur VS).
+Progression d'un biome (mécanique GELÉE depuis ch.12, « Évoluer biomes »
+supprimé — conservée ici pour mémoire, aucun Lieu n'y passe plus) : T0
+découverte → T1 Peu Commun : équipement obtenu → T2 Rare : mécanique forte →
+T4 Légendaire : biome secondaire révélé.
 
 ## Carte holographique (HoloMap3D)
 

@@ -83,12 +83,13 @@ const PRESETS := {
 }
 
 # Mapping id de biome (.tres) → preset. Inconnu → "forest".
-static func preset_for_biome(biome_id: String) -> String:
-	match biome_id:
-		"biome_foret":    return "forest"
-		"biome_marecage": return "marsh"
-		"biome_montagne": return "mountain"
-		_:                return "forest"
+# ⚠ Plus aucun appelant actif depuis le pivot Cyberpunk (07/09/2026, table
+# rase du bestiaire Dark Fantasy) : le décor adverse réel est maintenant
+# `CombatDecorFactory` (Usine), pas un placeholder de biome. Fonction
+# conservée (comme la classe entière, cf. TestBackgrounds.gd) pour un futur
+# Lieu qui voudrait ce genre de fond animé — sans mapping d'id à ce jour.
+static func preset_for_biome(_biome_id: String) -> String:
+	return "forest"
 
 # Couleur d'accent du biome (lucioles / feux follets / lueur des pics).
 # Sert aussi à teinter le séparateur VS de la scène de combat.

@@ -344,13 +344,13 @@ func _shoot_expe() -> void:
 # message de Game Over — mise en scène directe (pas de Village complet).
 func _shoot_flux() -> void:
 	var lancement := ExpeLancementPanel.new()
-	lancement.lieu_id = "biome_foret"
+	lancement.lieu_id = "biome_usine"
 	_vp.add_child(lancement)
 	await get_tree().create_timer(0.4).timeout
 	await _capture("res://tests/_shot_expe_lancement.png")
 	lancement.queue_free()
 
-	var ecran := ExpeditionScreen.new("biome_foret",
+	var ecran := ExpeditionScreen.new("biome_usine",
 			load("res://data/expedition/palier_peripherie.tres"),
 			load("res://data/combat_ctb/avatar.tres"),
 			load("res://data/expedition/pool_defaut.tres"), 1337)
@@ -621,7 +621,7 @@ func _shoot_forge() -> void:
 	# Injection APRÈS le boot du Village : load_save() écraserait sinon
 	# ces états forcés avec la sauvegarde réelle du joueur.
 	GameData.village["maitrise_actuelle"] = 1
-	for bid: String in ["biome_foret", "biome_marecage", "biome_montagne"]:
+	for bid: String in ["biome_usine"]:
 		GameData.get_entity(bid)["est_decouvert"] = true
 	for eid: String in ["equipment_anneau", "equipment_armure"]:
 		GameData.get_entity(eid)["est_debloque"] = true
@@ -640,7 +640,7 @@ func _shoot_adventure() -> void:
 	var village: Node = (load("res://scenes/village/village.tscn") as PackedScene).instantiate()
 	_vp.add_child(village)
 	await get_tree().create_timer(1.0).timeout
-	village.adv_selected_biome_id = "biome_foret"
+	village.adv_selected_biome_id = "biome_usine"
 	village._open_panel("adventure")
 	await get_tree().create_timer(1.2).timeout
 	_capture("res://tests/_shot_adventure_panel.png")
@@ -649,7 +649,7 @@ func _shoot_adventure() -> void:
 func _shoot_evolution() -> void:
 	GameData.pending_evolution = {
 		"entity_type": "creature",
-		"entity_id":   "creature_foret_surface",
+		"entity_id":   "creature_flamebot",
 		"entity_name": "Rat des Égouts",
 		"from_tier":   1,
 		"to_tier":     2,
@@ -682,9 +682,9 @@ func _shoot_tooltip() -> void:
 	get_tree().root.add_child.call_deferred(village)
 	await get_tree().create_timer(1.2).timeout
 
-	var biome := GameData.get_entity("biome_foret")
+	var biome := GameData.get_entity("biome_usine")
 	TooltipOverlay.show_for(
-			Translations.entity_name(biome, "biome_foret"),
+			Translations.entity_name(biome, "biome_usine"),
 			"Max zone: Surface\nMechanic: Ambush\nNext rank — Rare: frees a Memory Fragment · activates the Ambush mechanic · unlocks the Depths zone",
 			UIColors.tier_color(2),
 			Translations.entity_lore(biome))
@@ -724,7 +724,7 @@ func _shoot_maxtier_forge() -> void:
 	_vp.add_child(village)
 	await get_tree().create_timer(1.0).timeout
 	GameData.village["maitrise_actuelle"] = Balance.GLOBAL_MAX_TIER
-	for bid: String in ["biome_foret", "biome_marecage", "biome_montagne"]:
+	for bid: String in ["biome_usine"]:
 		GameData.get_entity(bid)["est_decouvert"] = true
 	for eid: String in ["equipment_anneau", "equipment_armure"]:
 		var eq := GameData.get_entity(eid)
@@ -1094,13 +1094,13 @@ func _capture(path: String) -> Image:
 # Résumé de cycle factice : XP réparties réalistes, butin, une évolution dispo.
 func _fake_cycle_data() -> void:
 	var detail_xp := {
-		"creature_foret_surface": 0.0,
+		"creature_flamebot": 0.0,
 		"spike_trap":             0.0,
 		"herb_find":              0.0,
 	}
 	# Donne à chaque entité une XP cohérente (barre partiellement remplie).
 	var gains := {}
-	for eid: String in ["hero", "biome_foret", "passive_combat_mastery",
+	for eid: String in ["hero", "biome_usine", "passive_combat_mastery",
 			"equipment_anneau"] + detail_xp.keys():
 		var e := GameData.get_entity(eid)
 		if e.is_empty():
@@ -1108,32 +1108,32 @@ func _fake_cycle_data() -> void:
 		var tier := int(e.get("maitrise_actuelle", 0))
 		var idx: int = mini(tier + 1, GameData.xp_thresholds.size() - 1)
 		var threshold := float(GameData.xp_thresholds[idx])
-		var frac := 1.15 if eid == "creature_foret_surface" else 0.55
+		var frac := 1.15 if eid == "creature_flamebot" else 0.55
 		e["xp_maitrise_actuelle"] = threshold * frac
 		gains[eid] = threshold * 0.40
 	for eid: String in detail_xp:
 		detail_xp[eid] = gains.get(eid, 25.0)
 
-	GameData.get_entity("biome_foret")["est_decouvert"] = true
+	GameData.get_entity("biome_usine")["est_decouvert"] = true
 
 	CycleData.last_cycle_summary = {
 		"victory":              true,
 		"interrupted":          false,
-		"biome_id":             "biome_foret",
+		"biome_id":             "biome_usine",
 		"hero_id":              "hero",
 		"modifier":             {},
 		"xp_total":             412.0,
 		"xp_hero":              gains.get("hero", 120.0),
-		"xp_biome":             gains.get("biome_foret", 90.0),
+		"xp_biome":             gains.get("biome_usine", 90.0),
 		"xp_passives_total":    gains.get("passive_combat_mastery", 30.0),
 		"xp_passives_detail":   {"passive_combat_mastery": gains.get("passive_combat_mastery", 30.0)},
 		"xp_entities_detail":   detail_xp,
 		"loot_total":           7,
-		"loot_detail":          {"res_fourrure": 6, "ingredient_oscar": 1},
+		"loot_detail":          {"res_ferraille": 6, "res_puce": 1},
 		"xp_equip_detail":      {"equipment_anneau": gains.get("equipment_anneau", 20.0)},
 		"combats_won":          9,
 		"events":               11,
 		"events_total":         12,
-		"new_discoveries":      ["creature_foret_surface", "spike_trap", "herb_find"],
+		"new_discoveries":      ["creature_flamebot", "spike_trap", "herb_find"],
 		"unique_beaten":        false,
 	}

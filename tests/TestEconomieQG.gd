@@ -479,15 +479,16 @@ func _test_panneau_expeditions() -> void:
 	print("\n[TEST 11] Expéditions : Évoluer biomes ABSENT, Évoluer créatures OK")
 	_reset_etat()
 	var evolve_txt := Translations.T("btn.evolve")
-	var biome := GameData.get_entity("biome_foret")
+	var biome := GameData.get_entity("biome_usine")
 	var tier_avant := int(biome.get("maitrise_actuelle", 0))
 	var xp_avant := float(biome.get("xp_maitrise_actuelle", 0.0))
 
 	# Biome gorgé d'XP : il serait « prêt à évoluer » — aucun bouton ne doit
 	# pourtant apparaître (les Lieux n'évoluent plus, décision actée).
 	biome["maitrise_actuelle"] = 0
+	biome["xp_maitrise_palier_suivant"] = 6000.0
 	biome["xp_maitrise_actuelle"] = 1000000.0
-	_assert(MasterySystem.can_evolve("biome_foret"),
+	_assert(MasterySystem.can_evolve("biome_usine"),
 			"précondition : le biome aurait pu évoluer (XP suffisante)")
 	var v := Village.new()
 	v.rp_content = VBoxContainer.new()
@@ -499,16 +500,16 @@ func _test_panneau_expeditions() -> void:
 	# Créature découverte et gorgée d'XP (plafond relevé par le biome T4) :
 	# son bouton Évoluer, lui, doit être là.
 	biome["maitrise_actuelle"] = 4
-	var pools: Dictionary = MasteryRegistry.get_biome_entity_pools("biome_foret")
+	var pools: Dictionary = MasteryRegistry.get_biome_entity_pools("biome_usine")
 	var cid := str((pools["creatures"] as Array)[0].get("id", ""))
-	_assert(cid != "", "précondition : une créature au pool de la Forêt")
+	_assert(cid != "", "précondition : une créature au pool de l'Usine")
 	var creature := GameData.get_entity(cid)
 	var c_tier_avant := int(creature.get("maitrise_actuelle", 0))
 	var c_xp_avant := float(creature.get("xp_maitrise_actuelle", 0.0))
 	var etait_connue: bool = GameData.player["bestiary"].has(cid)
 	if not etait_connue:
 		GameData.player["bestiary"][cid] = {"name": cid, "type": "creature",
-				"biome_id": "biome_foret", "biome_name": "", "count": 1, "xp": 0.0, "tier": 0}
+				"biome_id": "biome_usine", "biome_name": "", "count": 1, "xp": 0.0, "tier": 0}
 	creature["xp_maitrise_actuelle"] = 1000000.0
 	_assert(MasterySystem.can_evolve(cid), "précondition : la créature peut évoluer")
 	v.rp_content = VBoxContainer.new()

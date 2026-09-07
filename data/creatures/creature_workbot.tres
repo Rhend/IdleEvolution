@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CreatureData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/CreatureData.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "creature_workbot"
+nom_affichage_fr = "WorkBot"
+lore_fr = "Manutentionnaire de chaîne, jamais reprogrammé après l'arrêt de la ligne. Il continue de défendre un poste que plus personne ne surveille."
+lore_en = "A line handler, never reprogrammed after the assembly line stopped. It keeps defending a post no one watches anymore."
+nom_affichage_en = "WorkBot"
+est_unique = false
+zone_associee = 0
+biome_id = "biome_usine"
+maitrise_actuelle = 0
+xp_maitrise_actuelle = 0
+xp_maitrise_palier_suivant = 0
+stats_par_palier = {0: {"atk": 3, "def": 1, "hp": 30, "vit": 12, "xp_reward": 10}, 1: {"atk": 5, "def": 2, "hp": 48, "vit": 12, "xp_reward": 10}, 2: {"atk": 8, "def": 3, "hp": 77, "vit": 12, "xp_reward": 10}, 3: {"atk": 13, "def": 5, "hp": 123, "vit": 12, "xp_reward": 10}, 4: {"atk": 21, "def": 8, "hp": 197, "vit": 12, "xp_reward": 10}, 5: {"atk": 34, "def": 13, "hp": 315, "vit": 12, "xp_reward": 10}}
+ingredients_drop_ids = []
+loot_table = []
+passif_debloque_id = ""
+crit_chance = 0.05
+crit_multiplier = 1.5

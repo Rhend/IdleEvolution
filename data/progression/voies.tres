@@ -4,8 +4,4 @@
 
 [resource]
 script = ExtResource("1")
-lieux_par_voie = {
-2: "biome_colline",
-3: "biome_ville_fantome",
-4: "biome_cimetiere"
-}
+lieux_par_voie = {}

@@ -156,7 +156,7 @@ func _test_dotation_heros() -> void:
 			ids.has("comp_frappe_lourde") and ids.has("comp_second_souffle")
 			and ids.has("comp_tir_de_lame"))
 	_check("le bestiaire reste sans compétence",
-			CtbPont.combattant_depuis_entite("creature_foret_surface").competences.is_empty())
+			CtbPont.combattant_depuis_entite("creature_flamebot").competences.is_empty())
 
 # ─── 5 bis. Geste d'attaque (Attack_Shoot, 07/2026) ─────────
 # Le geste est PUREMENT visuel : il voyage dans l'événement « attaque » pour

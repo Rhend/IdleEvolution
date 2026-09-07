@@ -10,7 +10,5 @@ nom_affichage_fr = "Reliquaire de Chasse"
 nom_affichage_en = "Hunt Reliquary"
 lore_fr = "Chaque trophée raconte une victoire. Le registre des hauts faits du héros s'y grave, palier après palier."
 lore_en = "Each trophy tells of a victory. The hero's hall of deeds is etched here, tier after tier."
-biome_principal_id = "biome_foret"
-biomes_additionnels = Array[String](["biome_marecage", "biome_montagne"])
 gele = false
 bonus_par_palier = {}

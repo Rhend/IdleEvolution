@@ -23,6 +23,15 @@ func _ready() -> void:
 			sig.disconnect(SaveManager._on_progress)
 	SaveManager._save_timer.stop()
 	SaveManager._save_dirty = false
+	# Lieux SYNTHÉTIQUES (table rase du bestiaire Dark Fantasy, 07/09/2026) :
+	# `mecanique_active()` lit UNIQUEMENT `GameData.get_entity(lieu).
+	# mecanique_forte_id` (mécanisme générique, sans logique par id de biome) —
+	# un seul Lieu réel existe désormais (Usine, sans mécanique assignée), donc
+	# on inscrit ici de faux Lieux dédiés à chaque mécanique plutôt que de
+	# dépendre d'un contenu réel qui n'existe plus.
+	_inscrire_lieu_test("lieu_test_endurcissement", "endurcissement")
+	_inscrire_lieu_test("lieu_test_poison", "poison")
+	_inscrire_lieu_test("lieu_test_ambush", "ambush")
 	print("\n=== TEST MÉCANIQUES DE BIOME EN CTB (chantier 15) ===\n")
 	_test_moteur_modif_degats()
 	_test_moteur_statut_on_hit()
@@ -89,20 +98,20 @@ func _test_moteur_statut_on_hit() -> void:
 
 func _test_gate_palier() -> void:
 	print("\n[3] Gate : Périphérie sans mécanique, Enceinte/Assaut avec")
-	_check("Montagne @ Périphérie → aucune",
-			_run_lieu("biome_montagne", "palier_peripherie").mecanique_active() == "")
-	_check("Montagne @ Enceinte → endurcissement",
-			_run_lieu("biome_montagne", "palier_enceinte").mecanique_active() == "endurcissement")
-	_check("Montagne @ Noyau → endurcissement",
-			_run_lieu("biome_montagne", "palier_noyau").mecanique_active() == "endurcissement")
+	_check("Lieu endurcissement @ Périphérie → aucune",
+			_run_lieu("lieu_test_endurcissement", "palier_peripherie").mecanique_active() == "")
+	_check("Lieu endurcissement @ Enceinte → endurcissement",
+			_run_lieu("lieu_test_endurcissement", "palier_enceinte").mecanique_active() == "endurcissement")
+	_check("Lieu endurcissement @ Noyau → endurcissement",
+			_run_lieu("lieu_test_endurcissement", "palier_noyau").mecanique_active() == "endurcissement")
 	_check("Lieu sans biome → aucune",
 			_run_lieu("lieu_test", "palier_enceinte").mecanique_active() == "")
 
 # ─── 4-6. Câblage par mécanique ──────────────────────────────
 
 func _test_endurcissement_montagne() -> void:
-	print("\n[4] Endurcissement (Montagne) : dégâts du camp joueur × %.2f" % MECAS.endurcissement_mult)
-	var run := _run_lieu("biome_montagne", "palier_enceinte")
+	print("\n[4] Endurcissement : dégâts du camp joueur × %.2f" % MECAS.endurcissement_mult)
+	var run := _run_lieu("lieu_test_endurcissement", "palier_enceinte")
 	var data := _entrer_en_combat(run)
 	_check("un combat a démarré", run.combat_en_cours != null)
 	if run.combat_en_cours == null:
@@ -115,8 +124,8 @@ func _test_endurcissement_montagne() -> void:
 	run.combat_en_cours.derouler_auto()
 
 func _test_poison_marecage() -> void:
-	print("\n[5] Poison (Marécage) : statut on-hit du camp adverse")
-	var run := _run_lieu("biome_marecage", "palier_enceinte")
+	print("\n[5] Poison : statut on-hit du camp adverse")
+	var run := _run_lieu("lieu_test_poison", "palier_enceinte")
 	_entrer_en_combat(run)
 	_check("un combat a démarré", run.combat_en_cours != null)
 	if run.combat_en_cours == null:
@@ -131,7 +140,7 @@ func _test_poison_marecage() -> void:
 	run.combat_en_cours.derouler_auto()
 
 func _hook_poison_absent_en_peripherie() -> bool:
-	var run := _run_lieu("biome_marecage", "palier_peripherie")
+	var run := _run_lieu("lieu_test_poison", "palier_peripherie")
 	_entrer_en_combat(run)
 	if run.combat_en_cours == null:
 		return false
@@ -140,8 +149,8 @@ func _hook_poison_absent_en_peripherie() -> bool:
 	return absent
 
 func _test_ambush_foret() -> void:
-	print("\n[6] Embuscade (Forêt) : initiative retardée sur les combats NORMAUX")
-	var run := _run_lieu("biome_foret", "palier_enceinte")
+	print("\n[6] Embuscade : initiative retardée sur les combats NORMAUX")
+	var run := _run_lieu("lieu_test_ambush", "palier_enceinte")
 	_entrer_en_combat(run)
 	_check("un combat a démarré", run.combat_en_cours != null)
 	if run.combat_en_cours == null:
@@ -150,7 +159,7 @@ func _test_ambush_foret() -> void:
 			is_equal_approx(run.combat_en_cours.malus_horloge_initiale_joueur,
 					run.cfg_combat.malus_horloge_embuscade))
 	run.combat_en_cours.derouler_auto()
-	var run_p := _run_lieu("biome_foret", "palier_peripherie")
+	var run_p := _run_lieu("lieu_test_ambush", "palier_peripherie")
 	_entrer_en_combat(run_p)
 	if run_p.combat_en_cours != null:
 		_check("Périphérie : pas de malus",
@@ -158,6 +167,19 @@ func _test_ambush_foret() -> void:
 		run_p.combat_en_cours.derouler_auto()
 
 # ─── Helpers ─────────────────────────────────────────────────
+
+# Inscrit un Lieu SYNTHÉTIQUE dans GameData.entities (jamais un vrai .tres) :
+# seul `mecanique_forte_id` compte pour ce test, `_resource_to_dict` reproduit
+# exactement le dict qu'un vrai chargement de .tres produirait.
+func _inscrire_lieu_test(id: String, mecanique: String) -> void:
+	var b := BiomeData.new()
+	b.id = id
+	b.nom_affichage_fr = id
+	b.mecanique_forte_id = mecanique
+	b.est_decouvert = true
+	var d := GameData._resource_to_dict(b)
+	d["entity_type"] = Enums.EntityType.BIOME
+	GameData.entities[id] = d
 
 # Moteur 1v1 : héros ATK 10/VIT 10 vs ennemi ATK `atk_ennemi`/VIT 11 —
 # l'ennemi agit en PREMIER puis alternance stricte (K/11 < K/10 < 2K/11),
