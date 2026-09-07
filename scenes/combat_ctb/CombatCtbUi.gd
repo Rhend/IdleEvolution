@@ -52,9 +52,9 @@ signal fermee(recap: Dictionary)
 const N_FILE := 6              # activations prédites affichées (proposition actée)
 const BANDE_VS_PX := 80.0      # largeur de la découpe diagonale des deux fonds
 # Splash d'ouverture (« ENNEMY DETECTED », voir _intro) : tenue fixe puis fondu
-# vers le combat (retour Rhend 07/09/2026 — 2 secondes, peu importe embuscade
+# vers le combat (retour Rhend 07/09/2026 — 1 seconde, peu importe embuscade
 # ou mécanique de Lieu à annoncer).
-const DUREE_SPLASH_S := 2.0
+const DUREE_SPLASH_S := 1.0
 const DUREE_FONDU_SPLASH_S := 0.45
 
 # Éventail des boutons d'action AUTOUR du héros (retour Rhend 07/09/2026 : la
