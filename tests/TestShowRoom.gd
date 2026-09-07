@@ -338,7 +338,8 @@ func _test_costumes() -> void:
 # `SpriteSpinePersonnage.HAUTEUR_ETALON_PX` — PLACEHOLDER en attendant le vrai
 # chiffre de Christophe). Ce test vérifie que chacun rend à SA cible propre
 # (`SpinePersonnagesData.hauteur_cible_px`), et que l'ordre de gabarit voulu
-# (WorkBot < Relic < FlameBot) est bien respecté.
+# (Relic < WorkBot < FlameBot, ajustement du 07/09/2026 — Relic est passé
+# SOUS l'étalon WorkBot) est bien respecté.
 #
 # TOLÉRANCE : la mesure porte sur la pose COURANTE, qui respire avec l'Idle —
 # on ne vérifie pas un pixel, on vérifie que chacun est à SON mètre.
@@ -406,7 +407,7 @@ func _test_echelle() -> void:
 		sprite.free()
 	# Le héros au dernier niveau d'équipement ne doit pas grandir non plus :
 	# les 6 costumes partagent un squelette, donc une échelle — SA PROPRE
-	# échelle (Relic +10 %), plus l'étalon universel d'avant 09/2026.
+	# échelle (Relic -4 %), plus l'étalon universel d'avant 09/2026.
 	var cible_heros: float = cibles.get("relic", SpriteSpinePersonnage.HAUTEUR_ETALON_PX)
 	var nv6 := SpriteSpinePersonnage.creer_heros(6)
 	if nv6 != null:
@@ -415,14 +416,15 @@ func _test_echelle() -> void:
 		_assert(absf(nv6.hauteur_rendue_px() - cible_heros) <= cible_heros * ECART_ECHELLE_MAX,
 				"le héros Nv6 garde la taille du Nv1")
 		nv6.free()
-	# L'ORDRE voulu par le chara design (09/2026) : WorkBot (étalon) < Relic <
-	# FlameBot — c'est la contrainte que Rhend a posée, pas un simple ±20 %.
-	if cibles.has("workbot") and cibles.has("relic"):
-		_assert(float(cibles["workbot"]) < float(cibles["relic"]),
-				"WorkBot (étalon) est plus petit que Relic")
-	if cibles.has("relic") and cibles.has("flamebot"):
-		_assert(float(cibles["relic"]) < float(cibles["flamebot"]),
-				"Relic est plus petit que FlameBot")
+	# L'ORDRE voulu par le chara design (ajusté 07/09/2026) : Relic < WorkBot
+	# (étalon) < FlameBot — Relic est passé sous l'étalon, ce n'est plus un
+	# simple ±20 %.
+	if cibles.has("relic") and cibles.has("workbot"):
+		_assert(float(cibles["relic"]) < float(cibles["workbot"]),
+				"Relic est plus petit que WorkBot (étalon)")
+	if cibles.has("workbot") and cibles.has("flamebot"):
+		_assert(float(cibles["workbot"]) < float(cibles["flamebot"]),
+				"WorkBot (étalon) est plus petit que FlameBot")
 
 # ─── 7. Sens d'export et mise en scène ──────────────────────
 #

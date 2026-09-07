@@ -58,13 +58,13 @@ const MOTIFS_HORS_MESURE := ["Sword", "VFX"]
 # à `creer()`, pas cette constante directement (sauf pour l'étalon lui-même,
 # ou un appelant qui n'a pas d'entrée de registre — outils de mesure, tests).
 #
-# ⚠ PLACEHOLDER (09/2026) : 200 px en attendant que Christophe donne le vrai
+# ⚠ PLACEHOLDER (09/2026) : 220 px en attendant que Christophe donne le vrai
 # chiffre. Acté avec Rhend : jusqu'en 08/2026, TOUT le monde rendait à la même
 # hauteur (276 px, ancienne HAUTEUR_CIBLE_PX) — abandonné, le chara design
 # demande des gabarits différents pour porter un message au joueur (WorkBot
 # petit et utilitaire, FlameBot imposant). Voir taille_relative_pct pour
 # pourquoi ça ne se déduit PAS des unités Spine brutes de chaque export.
-const HAUTEUR_ETALON_PX := 200.0
+const HAUTEUR_ETALON_PX := 220.0
 # Hauteur à laquelle `decalage_x_px` (recentrage de Relic) a été MESURÉ
 # (26/08/2026, ancienne HAUTEUR_CIBLE_PX) — une calibration figée dans le
 # temps, SANS RAPPORT avec l'étalon de taille courant : changer HAUTEUR_
