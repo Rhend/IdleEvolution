@@ -220,6 +220,12 @@ func _ready() -> void:
 	# pas au premier clic « Carte » → ouverture instantanée ensuite.
 	_precharger_holomap.call_deferred()
 
+	# Écran de préchauffe (retour Rhend 07/09/2026) : décor de combat + squelettes
+	# Spine mis en cache (AssetCache) MAINTENANT, pas au premier combat de la
+	# partie — voile plein cadre par-dessus le hub déjà construit, retiré en
+	# fondu une fois la liste épuisée (voir BootWarmupScreen).
+	BootWarmupScreen.demarrer(self)
+
 # Échap ouvre/ferme le panneau Paramètres (les popups modaux — FileDialog —
 # consomment Échap avant nous, donc pas de conflit).
 func _unhandled_key_input(event: InputEvent) -> void:

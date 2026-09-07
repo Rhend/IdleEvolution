@@ -472,6 +472,10 @@ const STRINGS: Dictionary = {
 		"welcome.dont_show": "Je ne veux plus voir ce message",
 		"welcome.start": "Commencer l'aventure",
 
+		# ── Écran de préchauffe au démarrage (BootWarmupScreen) ────
+		"boot.titre":       "RELIQUARY",
+		"boot.chargement":  "Préparation des combats…",
+
 		# ── Général ──────────────────────────────────────────
 		"nav.back":               "← Village",
 		"nav.back_tt":            "Revenir au hub principal.",
@@ -936,6 +940,10 @@ const STRINGS: Dictionary = {
 		"welcome.body": "Here, [b]everything can evolve[/b] — your allies as much as your enemies. That's the heart of the game: every creature, every piece of gear, every biome grows, morphs and transforms as you progress.\n\nWhat you're discovering today is a [b]prototype[/b] (proof of concept): the foundations of an experience I want to make truly captivating.\n\nTo get there, I need your eyes on it. [b]Every bit of feedback matters[/b] — what you enjoy, what loses you, what makes you want to keep going or quit. Play, explore, and tell me everything.\n\nHappy evolving.",
 		"welcome.dont_show": "Don't show this message again",
 		"welcome.start": "Begin the adventure",
+
+		# ── Écran de préchauffe au démarrage (BootWarmupScreen) ────
+		"boot.titre":       "RELIQUARY",
+		"boot.chargement":  "Preparing battles…",
 
 		# ── Général ──────────────────────────────────────────
 		"nav.back":               "← Village",
