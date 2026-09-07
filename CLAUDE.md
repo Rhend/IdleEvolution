@@ -41,6 +41,19 @@ Scène principale : `res://scenes/village/village.tscn`. Branche de travail : `d
 - **UI 100 % en code** : factories dans `UIHelpers` (class_name statique), widgets
   dans `scenes/village/widgets/`.
 - **Pas de Luck** : la mécanique a été supprimée volontairement (2026-06). Ne pas réintroduire.
+- **Préchauffe des assets lourds** (`BootWarmupScreen.gd`, 07/09/2026) : tout asset dont
+  le premier chargement peut se sentir (skel/atlas Spine, calques de décor de combat,
+  shaders composés, gros `.tres`…) doit être ajouté à
+  `BootWarmupScreen._chemins_a_prechauffer()` — sinon ce coût n'est payé qu'au premier
+  usage réel en jeu (ex. le premier combat), au lieu de l'écran de chargement du
+  démarrage prévu pour ça. Réflexe à avoir dès qu'une livraison ajoute un nouveau
+  personnage/décor/skin lourd, pas seulement à l'écriture d'un nouveau système. Le
+  registre `SpinePersonnagesData` est déjà parcouru automatiquement (aucun ajout
+  manuel nécessaire pour un nouveau personnage qui y est déclaré) — seuls les chemins
+  câblés en dur (décor, shaders, chemins par défaut) demandent une ligne explicite.
+  Voir aussi `AssetCache` (`scripts/autoloads/AssetCache.gd`), le cache mémoire de
+  session qui rend cette préchauffe utile (sans lui, chaque combat rechargerait ces
+  fichiers depuis le disque).
 - **La ShowRoom est un BANC D'ESSAI, pas une fin** (acté 2026-08-27) : tout réglage
   visuel qu'on y peaufine devra être intégré au combat réel, où le fond adverse sera
   DYNAMIQUE (selon le Lieu de l'expédition) et les ennemis PIOCHÉS ALÉATOIREMENT dans
