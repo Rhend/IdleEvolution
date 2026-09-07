@@ -158,10 +158,15 @@ static func style_panneau_carte(camp_joueur: bool, actif: bool) -> StyleBoxTextu
 
 # TextureProgressBar : under/progress/over correspondent EXACTEMENT à
 # Back/Life/Border (mêmes dimensions sources) — pas de composition nécessaire.
-# Le remplissage (Life) reste NON teinté par la fraction de PV (choix DA de
-# Christophe, cf. mockups) : le texte "PV : x/y" garde l'info exacte, et la
-# couleur de la fraction bascule sur CE texte (CarteCombattantCtb._couleur_pv)
-# pour ne rien dégrader.
+# `nine_patch_stretch` = true : SANS lui, Godot impose la taille NATIVE de
+# `texture_under` (328×48) comme taille minimale — la barre restait énorme
+# quelle que soit `custom_minimum_size` (retour Rhend 07/09/2026). Marges à
+# 0 : simple étirement, pas un vrai 9-slice (le contour n'a pas de coins à
+# préserver). Le remplissage (Life) reste NON teinté par la fraction de PV
+# (choix DA de Christophe, cf. mockups) : le texte "PV : x/y" garde l'info
+# exacte, posé PAR-DESSUS la barre par l'appelant (CarteCombattantCtb) pour
+# gagner la hauteur qu'occupait sa propre ligne — et la couleur de la
+# fraction bascule sur CE texte (CarteCombattantCtb._couleur_pv).
 static func barre_pv(camp_joueur: bool) -> TextureProgressBar:
 	var b := TextureProgressBar.new()
 	b.min_value = 0.0
@@ -170,7 +175,8 @@ static func barre_pv(camp_joueur: bool) -> TextureProgressBar:
 	b.texture_under = HP_BACK
 	b.texture_progress = HP_LIFE
 	b.texture_over = HP_BORDER_HERO if camp_joueur else HP_BORDER_ENNEMI
-	b.custom_minimum_size = Vector2(0, 16)
+	b.nine_patch_stretch = true
+	b.custom_minimum_size = Vector2(0, 20)
 	return b
 
 # ─── Cadre de la file d'initiative ────────────────────────────

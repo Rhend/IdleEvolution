@@ -51,8 +51,21 @@ func _init(combattant: CtbCombattant) -> void:
 	_barre_pv = CombatUiSkin.barre_pv(cb.est_joueur())
 	v.add_child(_barre_pv)
 
-	_pv_txt = ExpeStyle.label_mono("", 12, UIColors.CYBER_TEXTE)
-	v.add_child(_pv_txt)
+	# Score DANS la barre (retour Rhend 07/09/2026 : gagner la ligne dédiée
+	# qu'occupait ce texte en dessous) : Label enfant de la TextureProgressBar,
+	# étalé sur tout son rect et centré — les Control dessinent APRÈS leur
+	# parent, il rend donc bien PAR-DESSUS le remplissage.
+	_pv_txt = ExpeStyle.label_mono("", 11, UIColors.CYBER_TEXTE)
+	_pv_txt.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_pv_txt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_pv_txt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_pv_txt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Contour sombre : le texte est maintenant posé SUR le remplissage rose de
+	# la barre, plus sur le fond sombre du panneau — sans lui, un score vert
+	# (PV haut) s'y fond.
+	_pv_txt.add_theme_constant_override("outline_size", 3)
+	_pv_txt.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_barre_pv.add_child(_pv_txt)
 
 	_pills = HFlowContainer.new()
 	_pills.add_theme_constant_override("h_separation", 4)

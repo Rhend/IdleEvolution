@@ -52,6 +52,15 @@ signal fermee(recap: Dictionary)
 const N_FILE := 6              # activations prédites affichées (proposition actée)
 const BANDE_VS_PX := 80.0      # largeur de la découpe diagonale des deux fonds
 
+# Éventail des boutons d'action AUTOUR du héros (retour Rhend 07/09/2026 : la
+# DA de Christophe fait apparaître les actions à même la scène, plus une
+# barre dédiée en bas) : arc centré au-dessus du buste, ouvert vers le HAUT
+# (les cartes de statut vivent déjà à gauche des pieds — un arc plein-haut
+# les évite plutôt qu'un cercle complet).
+const ACTIONS_RAYON_PX := 170.0
+const ACTIONS_ARC_DEG := 150.0
+const ACTIONS_ARC_CENTRE_DEG := -90.0
+
 # Zoom-DUEL sur l'attaque du JOUEUR uniquement (recette Darkest Dungeon 1,
 # resserrée — retour Rhend) : l'attaquant et sa cible GLISSENT au centre de
 # l'écran face à face, comme pour un coup final, pendant que la scène
@@ -108,7 +117,9 @@ var _orbes: Dictionary = {}    # CtbCombattant → EnergyBoule (placeholder spri
 var _sprites: Dictionary = {}  # CtbCombattant → SpriteSpinePersonnage (sprite RÉEL)
 var _ombres: Dictionary = {}   # CtbCombattant → CombatOmbrePortee (ombre au sol, sous le sprite/orbe)
 var _pieds: Dictionary = {}    # CtbCombattant → point d'appui au sol (dessin)
-var _file_box: HBoxContainer
+var _panneau_file: PanelContainer
+var _file_box: VBoxContainer
+var _bandeaux: VBoxContainer
 var _bandeau_tour: Label
 var _btn_attaquer: Button
 var _btn_defendre: Button
@@ -117,7 +128,10 @@ var _btn_objet: Button = null          # créé SEULEMENT si inventaire non vide
 # si le combattant n'en a pas ; GRISÉS avec compteur pendant la recharge
 # (état temporaire d'un contenu possédé — ≠ contenu absent).
 var _btns_competences: Array[Button] = []
-var _rangee_boutons: HBoxContainer
+# Boutons d'action : Control de positionnement LIBRE (retour Rhend
+# 07/09/2026, éventail autour du héros — voir _disposer_actions_autour_hero),
+# plus une HBoxContainer classique.
+var _rangee_boutons: Control
 var _rangee_cibles: HBoxContainer
 var _objet_en_attente: ConsommableData = null   # objet ciblé en attente de cible
 var _competence_en_attente: CompetenceCtbData = null   # idem pour une compétence
@@ -246,38 +260,12 @@ func _construire() -> void:
 		_zones_cible[cb] = zone
 	_placer_orbes()
 
-	# Colonne générale : file d'initiative / arène / barre d'actions.
-	var colonne := VBoxContainer.new()
-	colonne.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	colonne.add_theme_constant_override("separation", 8)
-	add_child(colonne)
-
-	# File d'initiative ENCADRÉE, fond opaque (retour Rhend : elle doit se
-	# détacher du biome visuel derrière).
-	var panneau_file := PanelContainer.new()
-	panneau_file.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var style_file := ExpeStyle.style_panneau(UIColors.CYBER_ACCENT, 1.0)
-	style_file.bg_color = UIColors.CYBER_BG   # opaque — jamais le biome au travers
-	panneau_file.add_theme_stylebox_override("panel", style_file)
-	colonne.add_child(panneau_file)
-	var haut := VBoxContainer.new()
-	haut.add_theme_constant_override("separation", 2)
-	panneau_file.add_child(haut)
-	var titre_file := ExpeStyle.label_mono(Translations.T("ctb.file_titre"), 11,
-			UIColors.CYBER_TEXTE_MUTED)
-	titre_file.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	haut.add_child(titre_file)
-	var centre_file := HBoxContainer.new()
-	centre_file.alignment = BoxContainer.ALIGNMENT_CENTER
-	haut.add_child(centre_file)
-	_file_box = HBoxContainer.new()
-	_file_box.add_theme_constant_override("separation", 6)
-	centre_file.add_child(_file_box)
-
-	# Arène scindée : cartes du camp joueur | vide central | cartes adverses.
+	# Arène scindée : cartes du camp joueur | vide central | cartes adverses —
+	# occupe maintenant tout l'écran (la barre d'actions du bas a disparu,
+	# voir plus bas).
 	var arene := HBoxContainer.new()
-	arene.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	colonne.add_child(arene)
+	arene.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(arene)
 	var camp_joueur := _colonne_camp(arene, BoxContainer.ALIGNMENT_CENTER)
 	var milieu := Control.new()
 	milieu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -290,23 +278,44 @@ func _construire() -> void:
 		_cartes[cb] = carte
 		(camp_joueur if cb.est_joueur() else camp_adverse).add_child(carte)
 
-	# Barre d'actions (bas) : bandeau de tour + Attaquer / Défendre + cibles.
-	# AUCUN bouton Objet : contenu absent, pas grisé (pilier projet).
-	var bas := PanelContainer.new()
-	var style_bas := ExpeStyle.style_panneau(UIColors.CYBER_ACCENT, 0.90)
-	style_bas.set_content_margin_all(10)
-	bas.add_theme_stylebox_override("panel", style_bas)
-	colonne.add_child(bas)
-	var bas_v := VBoxContainer.new()
-	bas_v.add_theme_constant_override("separation", 6)
-	bas.add_child(bas_v)
-	_bandeau_tour = ExpeStyle.label_mono("", 14, UIColors.CYBER_TEXTE)
-	_bandeau_tour.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	bas_v.add_child(_bandeau_tour)
-	_rangee_boutons = HBoxContainer.new()
-	_rangee_boutons.alignment = BoxContainer.ALIGNMENT_CENTER
-	_rangee_boutons.add_theme_constant_override("separation", 12)
-	bas_v.add_child(_rangee_boutons)
+	# File d'initiative : petit encart en HAUT-DROITE (retour Rhend
+	# 07/09/2026 — auparavant centrée en haut, pleine largeur). Empilée en
+	# COLONNE (pas en rangée) : 6 noms complets tiennent bien plus étroit
+	# ainsi qu'alignés côte à côte. Repositionné À LA MAIN (`_repositionner_
+	# panneau_file`, pas un preset d'ancre posé une fois) : son contenu
+	# (chips) n'existe pas encore ici, il arrive plus tard via
+	# `_rafraichir_file()` — un ancrage figé à la construction se serait
+	# retrouvé à agrandir la boîte HORS ÉCRAN vers la droite au premier
+	# rafraîchissement (la taille minimale grandit toujours vers le bas-
+	# droite, jamais vers son ancre).
+	_panneau_file = PanelContainer.new()
+	var style_file := ExpeStyle.style_panneau(UIColors.CYBER_ACCENT, 1.0, 1, 2)
+	style_file.bg_color = UIColors.CYBER_BG   # opaque — jamais le biome au travers
+	style_file.set_content_margin_all(5)
+	_panneau_file.add_theme_stylebox_override("panel", style_file)
+	add_child(_panneau_file)
+	var haut := VBoxContainer.new()
+	haut.add_theme_constant_override("separation", 1)
+	_panneau_file.add_child(haut)
+	var titre_file := ExpeStyle.label_mono(Translations.T("ctb.file_titre"), 9,
+			UIColors.CYBER_TEXTE_MUTED)
+	titre_file.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	haut.add_child(titre_file)
+	_file_box = VBoxContainer.new()
+	_file_box.add_theme_constant_override("separation", 2)
+	haut.add_child(_file_box)
+	_repositionner_panneau_file()
+
+	# Boutons d'action : Control à positionnement LIBRE, en éventail autour
+	# du héros (voir _disposer_actions_autour_hero) — la barre dédiée du bas
+	# n'a plus lieu d'être, Christophe fait apparaître les actions à même la
+	# scène. `_bandeau_tour` (« Au tour de … ») et `_rangee_cibles` (invite +
+	# Annuler du ciblage, choix d'objet) restent de simples bandeaux flottants,
+	# sans le gros panneau qui les portait avant.
+	_rangee_boutons = Control.new()
+	_rangee_boutons.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_rangee_boutons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_rangee_boutons)
 	_btn_attaquer = CombatUiSkin.bouton(Translations.T("ctb.attaquer"))
 	_btn_attaquer.pressed.connect(_sur_attaquer)
 	_rangee_boutons.add_child(_btn_attaquer)
@@ -316,10 +325,18 @@ func _construire() -> void:
 	_rangee_boutons.add_child(_btn_defendre)
 	# PAS de bouton Objet ici : il n'existe que si l'inventaire de run est
 	# non vide, recréé à chaque tour joueur (_montrer_actions).
+
+	_bandeaux = VBoxContainer.new()
+	_bandeaux.add_theme_constant_override("separation", 4)
+	add_child(_bandeaux)
+	_bandeau_tour = ExpeStyle.label_mono("", 13, UIColors.CYBER_TEXTE)
+	_bandeau_tour.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bandeaux.add_child(_bandeau_tour)
 	_rangee_cibles = HBoxContainer.new()
 	_rangee_cibles.alignment = BoxContainer.ALIGNMENT_CENTER
 	_rangee_cibles.add_theme_constant_override("separation", 8)
-	bas_v.add_child(_rangee_cibles)
+	_bandeaux.add_child(_rangee_cibles)
+	_repositionner_bandeaux()
 	_montrer_actions(false)
 
 	# Couche FX (dégâts flottants) au-dessus de tout le contenu de jeu.
@@ -353,6 +370,27 @@ func _colonne_camp(parent: Control, alignement: int) -> VBoxContainer:
 	marge.add_child(v)
 	parent.add_child(marge)
 	return v
+
+# Recale la file d'initiative en HAUT-DROITE sur SA taille minimale COURANTE
+# (`reset_size()`) — appelé à chaque changement de contenu (`_rafraichir_
+# file`), jamais un ancrage posé une fois : un Control hors d'un Container
+# grandit toujours vers le bas-droite quand son contenu grossit, jamais vers
+# une ancre, un panneau ancré à droite avant l'arrivée des chips finirait
+# hors écran au premier remplissage.
+func _repositionner_panneau_file() -> void:
+	if _panneau_file == null:
+		return
+	_panneau_file.reset_size()
+	_panneau_file.position = Vector2(size.x - _panneau_file.size.x - 10.0, 10.0)
+
+# Même correctif pour le bandeau de tour + la rangée de ciblage : centré en
+# bas, recalé à chaque changement (texte du tour, invite/Annuler, liste
+# d'objets).
+func _repositionner_bandeaux() -> void:
+	if _bandeaux == null:
+		return
+	_bandeaux.reset_size()
+	_bandeaux.position = Vector2((size.x - _bandeaux.size.x) * 0.5, size.y - _bandeaux.size.y - 12.0)
 
 # ─── Scène de bataille : sol + emplacements (placeholder sprites) ──
 
@@ -466,6 +504,7 @@ func _boucle() -> void:
 			moteur.jouer(_action_en_attente)
 		else:
 			_bandeau_tour.text = CarteCombattantCtb.nom_ui(c.data)
+			_repositionner_bandeaux()
 			await _pause(0.55)   # séquencement lisible des activations ennemies
 			if not is_inside_tree():
 				return
@@ -513,9 +552,43 @@ func _montrer_actions(on: bool, acteur: CtbCombattant = null) -> void:
 			_btn_objet.pressed.connect(_sur_objet)
 			_rangee_boutons.add_child(_btn_objet)
 	UIHelpers.clear_children_now(_rangee_cibles)
+	if on:
+		var visibles: Array = [_btn_attaquer, _btn_defendre]
+		visibles.append_array(_btns_competences)
+		if _btn_objet != null:
+			visibles.append(_btn_objet)
+		_disposer_actions_autour_hero(visibles)
 	if not on:
 		_bandeau_tour.text = ""
 		_mettre_cibles_en_avant(false)
+	_repositionner_bandeaux()
+
+# Éventail des boutons d'action autour du buste du héros (voir
+# ACTIONS_RAYON_PX/_ARC_DEG/_ARC_CENTRE_DEG) : chaque bouton est centré sur
+# un point RÉPARTI ÉGALEMENT sur l'arc — `reset_size()` d'abord, la largeur
+# varie avec le texte (compétences grisées « (n) », objets « ×N »).
+func _disposer_actions_autour_hero(boutons: Array) -> void:
+	if boutons.is_empty() or _sol == null or _sol.size.x <= 0.0:
+		return
+	var avatar := moteur.avatar()
+	var pied: Vector2 = _pieds.get(avatar,
+			Vector2(_sol.size.x * SOL_X_JOUEUR, _sol.size.y * SOL_Y_FRAC))
+	var hauteur := ORBE_TAILLE.y
+	var sprite: SpriteSpinePersonnage = _sprites.get(avatar)
+	if sprite != null:
+		var h := sprite.hauteur_rendue_px()
+		if h > 0.0:
+			hauteur = h
+	var foyer := pied - Vector2(0.0, hauteur * 0.55)
+	var n := boutons.size()
+	for i in n:
+		var t := 0.5 if n == 1 else float(i) / float(n - 1)
+		var angle_deg := ACTIONS_ARC_CENTRE_DEG - ACTIONS_ARC_DEG * 0.5 + ACTIONS_ARC_DEG * t
+		var angle := deg_to_rad(angle_deg)
+		var point := foyer + Vector2(cos(angle), sin(angle)) * ACTIONS_RAYON_PX
+		var b: Control = boutons[i]
+		b.reset_size()
+		b.position = point - b.size * 0.5
 
 func _sur_attaquer() -> void:
 	if not _btn_attaquer.visible:
@@ -562,10 +635,12 @@ func _montrer_choix_cibles(_vivants: Array[CtbCombattant]) -> void:
 		_objet_en_attente = null
 		_competence_en_attente = null
 		UIHelpers.clear_children_now(_rangee_cibles)
-		_mettre_cibles_en_avant(false))
+		_mettre_cibles_en_avant(false)
+		_repositionner_bandeaux())
 	_rangee_cibles.add_child(annuler)
 	_mettre_cibles_en_avant(true)
 	AudioManager.play_sfx("ui_select", -10.0)
+	_repositionner_bandeaux()
 
 # Choix d'un objet (chantier 7) : liste de l'inventaire (doublons regroupés
 # « ×n »), puis cible si l'effet en demande une.
@@ -593,9 +668,11 @@ func _sur_objet() -> void:
 		_rangee_cibles.add_child(b)
 	var annuler := CombatUiSkin.bouton(Translations.T("ctb.annuler"), 13, Vector2(0, 34))
 	annuler.pressed.connect(func() -> void:
-		UIHelpers.clear_children_now(_rangee_cibles))
+		UIHelpers.clear_children_now(_rangee_cibles)
+		_repositionner_bandeaux())
 	_rangee_cibles.add_child(annuler)
 	AudioManager.play_sfx("ui_select", -10.0)
+	_repositionner_bandeaux()
 
 func _sur_objet_choisi(objet: ConsommableData) -> void:
 	if not _btn_attaquer.visible:
@@ -692,11 +769,12 @@ func _rafraichir_file() -> void:
 		# PROCHAINE activation (i == 0) pour la faire ressortir de la file.
 		chip.add_theme_stylebox_override("panel",
 				CombatUiSkin.style_chip_tour(cb.est_joueur(), i == 0))
-		var m := UIHelpers.margin_of(4)
-		m.add_child(ExpeStyle.label_mono(CarteCombattantCtb.nom_ui(cb.data), 11,
+		var m := UIHelpers.margin_of(2)
+		m.add_child(ExpeStyle.label_mono(CarteCombattantCtb.nom_ui(cb.data), 9,
 				ExpeStyle.accent_camp(cb.est_joueur()).lightened(0.35)))
 		chip.add_child(m)
 		_file_box.add_child(chip)
+	_repositionner_panneau_file()
 
 func _marquer_actif(c: CtbCombattant) -> void:
 	for cb: CtbCombattant in _cartes:
