@@ -290,11 +290,10 @@ const STRINGS: Dictionary = {
 		"combat.unique_refight":  "⚔  Réaffronter %s",
 
 		# ── UI de combat CTB (Rework Combat — chantier 5) ─────
-		"ctb.attaquer":       "⚔  Attaquer",
-		"ctb.defendre":       "🛡  Défendre",
+		"ctb.attaquer":       "Attaquer",
+		"ctb.defendre":       "Défendre",
 		"ctb.choisir_cible":  "⊕ Cliquez votre cible (personnage ou carte)",
 		"ctb.annuler":        "Annuler",
-		"ctb.a_toi":          "Au tour de %s",
 		"ctb.tour_compteur":  "Tour : %d",
 		"ctb.embuscade":      "⚡ EMBUSCADE !",
 		"ctb.embuscade_sub":  "L'ennemi frappe le premier — initiative retardée",
@@ -312,7 +311,7 @@ const STRINGS: Dictionary = {
 		"expe.lancement_mecanique": "⚠ Mécanique du Lieu, active en profondeur : %s",
 		"expe.palier_verrouille": "🔒 %s — complétez les 3 étages de %s pour y accéder",
 		"ctb.entete_heros":   "Nv %d · XP %d/%d · Euren (run) %d · Modules (run) %d",
-		"ctb.objet":          "🧪  Objet",
+		"ctb.objet":          "Objet",
 		"ctb.choisir_objet":  "Choisir l'objet :",
 
 		# ── Panneau de stats détaillé (CombatPanneauStats, chantier UI_Concept2) ─
@@ -771,11 +770,10 @@ const STRINGS: Dictionary = {
 		"combat.unique_refight":  "⚔  Fight %s again",
 
 		# ── UI de combat CTB (Rework Combat — chantier 5) ─────
-		"ctb.attaquer":       "⚔  Attack",
-		"ctb.defendre":       "🛡  Defend",
+		"ctb.attaquer":       "Attack",
+		"ctb.defendre":       "Defend",
 		"ctb.choisir_cible":  "⊕ Click your target (character or card)",
 		"ctb.annuler":        "Cancel",
-		"ctb.a_toi":          "%s's turn",
 		"ctb.tour_compteur":  "Turn : %d",
 		"ctb.embuscade":      "⚡ AMBUSH!",
 		"ctb.embuscade_sub":  "The enemy strikes first — initiative delayed",
@@ -793,7 +791,7 @@ const STRINGS: Dictionary = {
 		"expe.lancement_mecanique": "⚠ District mechanic, active in depth: %s",
 		"expe.palier_verrouille": "🔒 %s — complete all 3 floors of %s to unlock",
 		"ctb.entete_heros":   "Lv %d · XP %d/%d · Euren (run) %d · Modules (run) %d",
-		"ctb.objet":          "🧪  Item",
+		"ctb.objet":          "Item",
 		"ctb.choisir_objet":  "Choose an item:",
 
 		# ── Panneau de stats détaillé (CombatPanneauStats, chantier UI_Concept2) ─

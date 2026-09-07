@@ -20,7 +20,7 @@
 class_name CombatPanneauStats
 extends PanelContainer
 
-const LARGEUR_MIN := 640.0
+const LARGEUR_MIN := 480.0
 
 var camp_joueur := true
 var _cb: CtbCombattant = null
@@ -45,25 +45,30 @@ func _construire() -> void:
 	custom_minimum_size = Vector2(LARGEUR_MIN, 0.0)
 	add_theme_stylebox_override("panel", CombatUiSkin.style_panneau_stats(camp_joueur))
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Filet de sécurité : le panneau est forcé à une largeur EXACTE par
+	# l'appelant (jusqu'au trait de séparation, CombatCtbUi._repositionner_
+	# panel_stats) — si le contenu déborde malgré tout, on le tronque plutôt
+	# que de laisser du texte peint hors de son propre panneau.
+	clip_contents = true
 
-	var marge := UIHelpers.margin_of(10)
+	var marge := UIHelpers.margin_of(8)
 	marge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(marge)
 	var corps := HBoxContainer.new()
-	corps.add_theme_constant_override("separation", 20)
+	corps.add_theme_constant_override("separation", 12)
 	corps.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	marge.add_child(corps)
 
 	# ── Colonne identité : nom/niveau, PV, Ammo ──
 	var col_id := VBoxContainer.new()
-	col_id.add_theme_constant_override("separation", 4)
+	col_id.add_theme_constant_override("separation", 2)
 	col_id.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	corps.add_child(col_id)
-	_lbl_identite = ExpeStyle.label_mono("", 15, UIColors.CYBER_TEXTE)
+	_lbl_identite = ExpeStyle.label_mono("", 14, UIColors.CYBER_TEXTE)
 	col_id.add_child(_lbl_identite)
-	_lbl_pv = ExpeStyle.label_mono("", 13, UIColors.CYBER_TEXTE)
+	_lbl_pv = ExpeStyle.label_mono("", 12, UIColors.CYBER_TEXTE)
 	col_id.add_child(_lbl_pv)
-	_lbl_ammo = ExpeStyle.label_mono("", 13, UIColors.CYBER_TEXTE_MUTED)
+	_lbl_ammo = ExpeStyle.label_mono("", 12, UIColors.CYBER_TEXTE_MUTED)
 	col_id.add_child(_lbl_ammo)
 
 	# ── Colonne stats : grille 4 colonnes (label/valeur × 2 groupes/ligne),
@@ -71,13 +76,13 @@ func _construire() -> void:
 	# reste du panneau reste sans ornement, un liseré sous chaque ligne
 	# chargerait l'écran pour rien.
 	var col_stats := VBoxContainer.new()
-	col_stats.add_theme_constant_override("separation", 4)
+	col_stats.add_theme_constant_override("separation", 2)
 	col_stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	corps.add_child(col_stats)
 	var grille := GridContainer.new()
 	grille.columns = 4
-	grille.add_theme_constant_override("h_separation", 10)
-	grille.add_theme_constant_override("v_separation", 4)
+	grille.add_theme_constant_override("h_separation", 8)
+	grille.add_theme_constant_override("v_separation", 2)
 	col_stats.add_child(grille)
 	_lbl_dmg = _cellule(grille, Translations.T("ctb.stats.dmg"), CombatUiSkin.SEPARATEUR_01)
 	_lbl_crit = _cellule(grille, Translations.T("ctb.stats.crit"), null)
@@ -96,13 +101,13 @@ func _construire() -> void:
 	titre_statuts.add_theme_constant_override("separation", 1)
 	titre_statuts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col_statuts.add_child(titre_statuts)
-	titre_statuts.add_child(ExpeStyle.label_mono(Translations.T("ctb.stats.status_titre"), 12,
+	titre_statuts.add_child(ExpeStyle.label_mono(Translations.T("ctb.stats.status_titre"), 11,
 			UIColors.CYBER_TEXTE_MUTED))
 	var soulignement := TextureRect.new()
 	soulignement.texture = CombatUiSkin.SEPARATEUR_03
 	soulignement.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	soulignement.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	soulignement.custom_minimum_size = Vector2(70, 8)
+	soulignement.custom_minimum_size = Vector2(56, 7)
 	soulignement.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	titre_statuts.add_child(soulignement)
 	_statuts_box = VBoxContainer.new()
@@ -116,17 +121,17 @@ func _cellule(grille: GridContainer, label_texte: String, separateur: Texture2D)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 1)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(ExpeStyle.label_mono(label_texte, 12, UIColors.CYBER_ACCENT_2))
+	col.add_child(ExpeStyle.label_mono(label_texte, 11, UIColors.CYBER_ACCENT_2))
 	if separateur != null:
 		var soulign := TextureRect.new()
 		soulign.texture = separateur
 		soulign.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		soulign.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		soulign.custom_minimum_size = Vector2(50, 6)
+		soulign.custom_minimum_size = Vector2(40, 5)
 		soulign.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		col.add_child(soulign)
 	grille.add_child(col)
-	var val := ExpeStyle.label_mono("", 12, UIColors.CYBER_TEXTE)
+	var val := ExpeStyle.label_mono("", 11, UIColors.CYBER_TEXTE)
 	grille.add_child(val)
 	return val
 

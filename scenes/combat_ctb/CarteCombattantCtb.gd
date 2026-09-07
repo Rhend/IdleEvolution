@@ -68,9 +68,10 @@ func _init(combattant: CtbCombattant) -> void:
 
 # Centre le widget au-dessus du point « pied » (même point que l'ombre
 # portée) — appelé par CombatCtbUi._placer_orbes() à chaque disposition.
+# Chevauche légèrement l'ellipse au sol (retour Rhend : « un peu plus basse »).
 func definir_position(pied: Vector2) -> void:
 	reset_size()
-	position = pied - Vector2(size.x * 0.5, size.y + 8.0)
+	position = pied - Vector2(size.x * 0.5, size.y - 4.0)
 
 # Point d'ancrage des textes flottants (au-dessus du widget, coordonnées de
 # l'ANCÊTRE FX : l'appelant convertit depuis le global).

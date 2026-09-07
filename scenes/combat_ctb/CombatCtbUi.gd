@@ -139,6 +139,7 @@ var _ombres: Dictionary = {}   # CtbCombattant → CombatOmbrePortee (ombre au s
 var _pieds: Dictionary = {}    # CtbCombattant → point d'appui au sol (dessin)
 var _panneau_file: VBoxContainer
 var _file_box: HBoxContainer
+var _soulignement_file: Control
 var _lbl_tour: Label
 var _panneau_stats: CombatPanneauStats
 # « Entité alliée en sélection » du panneau de stats — un seul allié possible
@@ -149,7 +150,6 @@ var _entite_alliee_selectionnee: CtbCombattant = null
 # peints par `_dessiner_liens_actions` (voir CombatUiSkin.couleur_lien).
 var _liens_actions: Array[Dictionary] = []
 var _bandeaux: VBoxContainer
-var _bandeau_tour: Label
 var _btn_attaquer: Button
 var _btn_defendre: Button
 var _btn_objet: Button = null          # créé SEULEMENT si inventaire non vide
@@ -320,6 +320,15 @@ func _construire() -> void:
 	_file_box.add_theme_constant_override("separation", 4)
 	_file_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panneau_file.add_child(_file_box)
+	# Soulignement décoratif (retour Rhend : « il manque le sprite qui
+	# souligne la zone d'initiative ») — même langage que les traits
+	# bouton → buste (coude + cercle creux, couleur de Cyber_Line), pour lier
+	# visuellement la rangée de puces au compteur de tour en dessous.
+	_soulignement_file = Control.new()
+	_soulignement_file.custom_minimum_size = Vector2(TAILLE_PUCE_TOUR + LIEN_COUDE_PX, 12.0)
+	_soulignement_file.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_soulignement_file.draw.connect(_dessiner_soulignement_file)
+	_panneau_file.add_child(_soulignement_file)
 	var tour_box := HBoxContainer.new()
 	tour_box.add_theme_constant_override("separation", 4)
 	tour_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -338,9 +347,10 @@ func _construire() -> void:
 	# Boutons d'action : Control à positionnement LIBRE, en 2 colonnes
 	# encadrant le héros (voir _disposer_actions_deux_colonnes) — la barre
 	# dédiée du bas n'a plus lieu d'être, Christophe fait apparaître les
-	# actions à même la scène. `_bandeau_tour` (« Au tour de … ») et
-	# `_rangee_cibles` (invite + Annuler du ciblage, choix d'objet) restent de
-	# simples bandeaux flottants, sans le gros panneau qui les portait avant.
+	# actions à même la scène. `_rangee_cibles` (invite + Annuler du ciblage,
+	# choix d'objet) reste un simple bandeau flottant, sans le gros panneau
+	# qui le portait avant — plus d'annonce « Au tour de … » (retour Rhend :
+	# sans intérêt, redondant avec les boutons qui apparaissent).
 	_rangee_boutons = Control.new()
 	_rangee_boutons.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_rangee_boutons.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -359,9 +369,6 @@ func _construire() -> void:
 	_bandeaux = VBoxContainer.new()
 	_bandeaux.add_theme_constant_override("separation", 4)
 	add_child(_bandeaux)
-	_bandeau_tour = ExpeStyle.label_mono("", 13, UIColors.CYBER_TEXTE)
-	_bandeau_tour.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_bandeaux.add_child(_bandeau_tour)
 	_rangee_cibles = HBoxContainer.new()
 	_rangee_cibles.alignment = BoxContainer.ALIGNMENT_CENTER
 	_rangee_cibles.add_theme_constant_override("separation", 8)
@@ -391,15 +398,23 @@ func _construire() -> void:
 	_voile_contenu.alignment = BoxContainer.ALIGNMENT_CENTER
 	_voile.add_child(_voile_contenu)
 
-# Recale le panneau de stats en BAS-GAUCHE sur sa taille minimale COURANTE —
-# même correctif que la file d'initiative : sa hauteur varie avec le nombre
-# de statuts actifs de l'entité suivie, un ancrage figé grandirait vers le
-# bas-droite au lieu de rester collé au coin de l'écran.
+# Panneau de stats : PLAQUÉ contre le bord bas-gauche de l'écran, sa largeur
+# forcée jusqu'au trait de séparation (retour Rhend : « doit prendre tout le
+# bas de la partie de gauche et doit être coupé par le trait ») — même
+# formule que la coupure holographique (`CombatFondScinde.x_frontiere`),
+# évaluée à `size.y` (le bas de l'écran, où la diagonale est la PLUS À
+# GAUCHE) pour qu'AUCUNE portion du panneau ne déborde dans le camp adverse
+# sur toute sa hauteur. `reset_size()` d'abord pour la hauteur NATURELLE
+# (varie avec le nombre de statuts actifs de l'entité suivie), puis la
+# largeur est ÉCRASÉE — `clip_contents` (CombatPanneauStats) protège si le
+# contenu ne tenait quand même pas.
 func _repositionner_panel_stats() -> void:
 	if _panneau_stats == null:
 		return
 	_panneau_stats.reset_size()
-	_panneau_stats.position = Vector2(10.0, size.y - _panneau_stats.size.y - 10.0)
+	var largeur := CombatFondScinde.x_frontiere(size.y, size.y, size.x, BANDE_VS_PX)
+	_panneau_stats.size = Vector2(largeur, _panneau_stats.size.y)
+	_panneau_stats.position = Vector2(0.0, size.y - _panneau_stats.size.y)
 
 # Recale la file d'initiative en HAUT-DROITE sur SA taille minimale COURANTE
 # (`reset_size()`) — appelé à chaque changement de contenu (`_rafraichir_
@@ -533,7 +548,6 @@ func _boucle() -> void:
 			continue
 		_marquer_actif(c)
 		if c.est_joueur():
-			_bandeau_tour.text = Translations.T("ctb.a_toi") % CarteCombattantCtb.nom_ui(c.data)
 			_montrer_actions(true, c)
 			await _action_choisie
 			if not is_inside_tree():
@@ -541,8 +555,6 @@ func _boucle() -> void:
 			_montrer_actions(false)
 			moteur.jouer(_action_en_attente)
 		else:
-			_bandeau_tour.text = CarteCombattantCtb.nom_ui(c.data)
-			_repositionner_bandeaux()
 			await _pause(0.55)   # séquencement lisible des activations ennemies
 			if not is_inside_tree():
 				return
@@ -597,7 +609,6 @@ func _montrer_actions(on: bool, acteur: CtbCombattant = null) -> void:
 			visibles.append(_btn_objet)
 		_disposer_actions_deux_colonnes(visibles)
 	if not on:
-		_bandeau_tour.text = ""
 		_mettre_cibles_en_avant(false)
 		_liens_actions.clear()
 		if _rangee_boutons != null:
@@ -631,28 +642,28 @@ func _disposer_actions_deux_colonnes(boutons: Array) -> void:
 		var l := sprite.largeur_rendue_px()
 		if l > 0.0:
 			largeur = l
-	var colonnes: Array = [[], []]   # [gauche, droite]
-	for i in boutons.size():
-		colonnes[i % 2].append(boutons[i])
 	var haut := pied.y - hauteur * ACTIONS_HAUT_FRAC
 	var bas := pied.y - hauteur * ACTIONS_BAS_FRAC
-	for c in 2:
-		var a_droite := c == 1
-		var colonne: Array = colonnes[c]
+	var n := boutons.size()
+	# Hauteur tirée de l'index GLOBAL (pas d'un compteur par colonne) : les
+	# deux colonnes échantillonnent des crans ALTERNÉS sur le même étalement
+	# vertical, donc se décalent naturellement l'une par rapport à l'autre —
+	# la symétrie miroir (mêmes hauteurs des deux côtés) ne suit PAS le
+	# mockup, où les colonnes sont visiblement décalées (retour Rhend).
+	for i in n:
+		var a_droite := i % 2 == 1
+		var t := 0.5 if n == 1 else float(i) / float(n - 1)
+		var y := lerpf(haut, bas, t)
 		var x := pied.x + (1.0 if a_droite else -1.0) * (largeur * 0.5 + ACTIONS_MARGE_PX)
-		var n: int = colonne.size()
-		for i in n:
-			var t := 0.5 if n == 1 else float(i) / float(n - 1)
-			var y := lerpf(haut, bas, t)
-			var b: Control = colonne[i]
-			b.reset_size()
-			var centre := Vector2(x, y)
-			b.position = centre - b.size * 0.5
-			var bord_x := centre.x - b.size.x * 0.5 if a_droite else centre.x + b.size.x * 0.5
-			var ancre_x := pied.x + (1.0 if a_droite else -1.0) * largeur * LIEN_ANCRE_FRAC
-			_liens_actions.append({
-				"depart": Vector2(bord_x, y), "arrivee": Vector2(ancre_x, y), "a_droite": a_droite,
-			})
+		var b: Control = boutons[i]
+		b.reset_size()
+		var centre := Vector2(x, y)
+		b.position = centre - b.size * 0.5
+		var bord_x := centre.x - b.size.x * 0.5 if a_droite else centre.x + b.size.x * 0.5
+		var ancre_x := pied.x + (1.0 if a_droite else -1.0) * largeur * LIEN_ANCRE_FRAC
+		_liens_actions.append({
+			"depart": Vector2(bord_x, y), "arrivee": Vector2(ancre_x, y), "a_droite": a_droite,
+		})
 	if _rangee_boutons != null:
 		_rangee_boutons.queue_redraw()
 
@@ -676,6 +687,22 @@ func _dessiner_liens_actions() -> void:
 		_rangee_boutons.draw_line(coude, arrivee, couleur, LIEN_EPAISSEUR_PX, true)
 		_rangee_boutons.draw_arc(arrivee, LIEN_RAYON_NOEUD_PX, 0.0, TAU, 16, couleur,
 				LIEN_EPAISSEUR_PX, true)
+
+# Même langage visuel (coude + cercle creux) que les traits d'action, réduit
+# pour lier la rangée de puces de la file d'initiative à « Tour : N » en
+# dessous (retour Rhend — décoration statique, pas besoin de recalcul).
+func _dessiner_soulignement_file() -> void:
+	if _soulignement_file == null:
+		return
+	var couleur := CombatUiSkin.couleur_lien()
+	var h := _soulignement_file.size.y
+	var depart := Vector2(0.0, 2.0)
+	var coude := Vector2(TAILLE_PUCE_TOUR * 0.5, 2.0)
+	var arrivee := Vector2(coude.x + LIEN_COUDE_PX, h - 2.0)
+	_soulignement_file.draw_line(depart, coude, couleur, LIEN_EPAISSEUR_PX, true)
+	_soulignement_file.draw_line(coude, arrivee, couleur, LIEN_EPAISSEUR_PX, true)
+	_soulignement_file.draw_arc(arrivee, LIEN_RAYON_NOEUD_PX, 0.0, TAU, 16, couleur,
+			LIEN_EPAISSEUR_PX, true)
 
 func _sur_attaquer() -> void:
 	if not _btn_attaquer.visible:

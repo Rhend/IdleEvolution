@@ -162,14 +162,26 @@ static func _style_texture(cle: String, couches: Array, alpha := 1.0) -> StyleBo
 
 # ─── Bouton d'action ──────────────────────────────────────────
 
+# Marge intérieure du bouton : SANS elle, le texte touche (voire déborde de)
+# la bordure — la texture composée n'a aucune marge de contenu par défaut
+# (retour Rhend : « les textes dépassent de leur conteneur »).
+const BOUTON_MARGE_H := 14.0
+const BOUTON_MARGE_V := 6.0
+
 static func _style_bouton(etat: String) -> StyleBoxTexture:
+	var s: StyleBoxTexture
 	match etat:
 		"survol", "presse":
-			return _style_texture("bouton_survol", [BOUTON_BACK, BOUTON_AURA, BOUTON_BORDER])
+			s = _style_texture("bouton_survol", [BOUTON_BACK, BOUTON_AURA, BOUTON_BORDER])
 		"desactive":
-			return _style_texture("bouton_normal", [BOUTON_BACK, BOUTON_BORDER], 0.45)
+			s = _style_texture("bouton_normal", [BOUTON_BACK, BOUTON_BORDER], 0.45)
 		_:
-			return _style_texture("bouton_normal", [BOUTON_BACK, BOUTON_BORDER])
+			s = _style_texture("bouton_normal", [BOUTON_BACK, BOUTON_BORDER])
+	s.content_margin_left = BOUTON_MARGE_H
+	s.content_margin_right = BOUTON_MARGE_H
+	s.content_margin_top = BOUTON_MARGE_V
+	s.content_margin_bottom = BOUTON_MARGE_V
+	return s
 
 # Bouton d'action neuf : chrome RÉEL de Christophe, style unique quelle que
 # soit l'action (le mockup ne distingue les actions que par leur texte — plus
