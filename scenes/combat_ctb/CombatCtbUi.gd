@@ -51,6 +51,11 @@ signal fermee(recap: Dictionary)
 
 const N_FILE := 6              # activations prédites affichées (proposition actée)
 const BANDE_VS_PX := 80.0      # largeur de la découpe diagonale des deux fonds
+# Splash d'ouverture (« ENNEMY DETECTED », voir _intro) : tenue fixe puis fondu
+# vers le combat (retour Rhend 07/09/2026 — 2 secondes, peu importe embuscade
+# ou mécanique de Lieu à annoncer).
+const DUREE_SPLASH_S := 2.0
+const DUREE_FONDU_SPLASH_S := 0.45
 
 # Éventail des boutons d'action AUTOUR du héros (retour Rhend 07/09/2026 : la
 # DA de Christophe fait apparaître les actions à même la scène, plus une
@@ -958,16 +963,20 @@ func _flotter(cb: CtbCombattant, texte: String, taille: int, couleur: Color,
 # Splash RÉEL de Christophe (« ENNEMY DETECTED », UI_Concept1.png) : fond +
 # circuit rouge + glyphe Artefact + lances, posés SOUS le texte (_voile_contenu
 # reste au sommet de `_voile`) et retirés avec elle en fin d'intro — l'outro
-# (victoire/défaite) réutilise `_voile` SANS ce décor.
+# (victoire/défaite) réutilise `_voile` SANS ce décor. Tenue à DUREE_SPLASH_S
+# fixe (retour Rhend 07/09/2026 : depuis AssetCache/BootWarmupScreen, la
+# construction qui précède est quasi instantanée — CombatLoadingScreen, posé
+# par l'appelant AVANT cette construction, ne masque donc plus qu'un flash de
+# 1-2 frames et cède aussitôt la place à CE voile, qui devient de fait le
+# splash visible ; sa durée fixe est ce que le joueur perçoit comme le temps
+# d'affichage du splash). ⚠ Plus de titre « ⚔ COMBAT » ASCII : reliquat de
+# l'ancienne peau cyberpunk d'avant la DA réelle de Christophe, redondant
+# avec le texte déjà peint dans le splash — supprimé.
 func _intro() -> void:
 	var visuel := CombatUiSkin.splash_ennemi_detecte()
 	_voile.add_child(visuel)
 	_voile.move_child(visuel, 0)
 
-	var titre := ExpeStyle.label_mono(Translations.T("ctb.combat_titre"), 34,
-			UIColors.CYBER_ACCENT)
-	titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_voile_contenu.add_child(titre)
 	if embuscade:
 		AudioManager.play_sfx("trap_appear", -4.0)
 		var amb := ExpeStyle.label_mono(Translations.T("ctb.embuscade"), 26,
@@ -986,14 +995,14 @@ func _intro() -> void:
 				UIColors.CYBER_ACCENT_2)
 		meca.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_voile_contenu.add_child(meca)
-	await _pause(1.1 if embuscade or annonce_mecanique != "" else 0.7)
+	await _pause(DUREE_SPLASH_S)
 	if not is_inside_tree():
 		return
 	if facteur_delais > 0.0:
 		var tw := create_tween()
 		tw.set_parallel(true)
-		tw.tween_property(_voile, "color:a", 0.0, 0.45)
-		tw.tween_property(visuel, "modulate:a", 0.0, 0.45)
+		tw.tween_property(_voile, "color:a", 0.0, DUREE_FONDU_SPLASH_S)
+		tw.tween_property(visuel, "modulate:a", 0.0, DUREE_FONDU_SPLASH_S)
 		await tw.finished
 	else:
 		_voile.color.a = 0.0
