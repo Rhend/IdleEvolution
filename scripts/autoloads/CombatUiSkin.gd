@@ -142,10 +142,25 @@ static func _image_de(tex: Texture2D) -> Image:
 	img.convert(Image.FORMAT_RGBA8)
 	return img
 
+# Les calques d'une famille (Back/Aura/Border) sont livrés sur un canevas
+# souvent plus grand que leur contenu VISIBLE (marge morte transparente
+# autour du rectangle dessiné). Sans recadrage, la texture composée traîne
+# cette marge : stretchée à un ratio très éloigné du natif (le panneau de
+# stats, très large et bas, contre le rectangle quasi carré d'origine), le
+# CONTENU posé dessus (marges calculées sur le Control réel) se retrouvait
+# visuellement décalé par rapport à la bordure dessinée — retour Rhend :
+# « le texte déborde ». `get_used_rect()` (calculé sur le premier calque,
+# Back) donne le rectangle réellement peint ; recadrer TOUS les calques sur
+# CE même rectangle (pas leur propre used_rect, qui pourrait légèrement
+# différer d'un calque à l'autre) les garde alignés entre eux.
 static func _composer(couches: Array) -> ImageTexture:
 	var base: Image = _image_de(couches[0])
+	var rect := base.get_used_rect()
+	if rect.size.x <= 0 or rect.size.y <= 0:
+		rect = Rect2i(Vector2i.ZERO, base.get_size())
+	base = base.get_region(rect)
 	for i in range(1, couches.size()):
-		var c: Image = _image_de(couches[i])
+		var c: Image = _image_de(couches[i]).get_region(rect)
 		base.blend_rect(c, Rect2i(Vector2i.ZERO, c.get_size()), Vector2i.ZERO)
 	return ImageTexture.create_from_image(base)
 
