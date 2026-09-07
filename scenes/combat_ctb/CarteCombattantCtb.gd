@@ -1,35 +1,34 @@
 # ============================================================
-# CarteCombattantCtb — Carte d'UN combattant dans l'écran de combat CTB
-# (Rework Combat, chantier 5). Nom, barre + valeurs de PV, pills de statuts
-# DoT (type, stacks, durée restante en activations), marqueur de garde
-# (Défendre). 100 % construite en code (règle projet).
+# CarteCombattantCtb — HUD compact d'UN combattant, posé SOUS SES PIEDS dans
+# la scène de combat CTB (chantier UI_Concept2, 07/09/2026 — le mockup fait
+# foi : plus de carte en colonne latérale, un mini-HUD ancré au personnage).
 #
-# Chrome RÉEL de Christophe depuis 09/2026 (`CombatUiSkin`, livraison « Ui
-# combat ») : panneau Back/Border/Aura par camp, barre de PV Back/Life/Border
-# (TextureProgressBar). Le liseré OR « ciblable » reste procédural
-# (`_survol_overlay`) : aucune texture or n'a été livrée et c'est un état de
-# JEU, pas un habillage — jamais dégradé par le skin.
+# Contenu : pills de statut compactes (garde, DoT — mêmes données qu'avant,
+# juste rétrécies) au-dessus d'une barre de PV (chrome RÉEL de Christophe,
+# `CombatUiSkin.barre_pv`). Pas de nom : le nom vit désormais dans
+# `CombatPanneauStats`, pas ici.
 #
-# États visuels pilotés par l'écran (CombatCtbUi) :
-#   • marquer_actif(bool)   — halo (Aura) : c'est l'activation de ce combattant
-#   • marquer_ciblable(bool)— liseré or + clic = choisir pour cible (signal cliquee)
+# Ni clic ni survol : le ciblage à la souris (anneau or + réticule) est DÉJÀ
+# peint dans la scène par `CombatCtbUi._dessiner_sol`, et le halo « c'est ton
+# tour » DÉJÀ porté par `CombatOmbrePortee` — les dupliquer ici serait un
+# doublon, pas un habillage.
+#
+# `definir_position(pied)` : positionné par l'appelant (CombatCtbUi.
+# _placer_orbes, même point que l'ombre) — ce widget ne connaît pas la scène.
 # `rafraichir()` relit tout depuis le CtbCombattant (source de vérité).
 # `centre_fx()` : point d'ancrage des dégâts flottants (coordonnées écran).
 # ============================================================
 class_name CarteCombattantCtb
-extends PanelContainer
+extends VBoxContainer
 
-signal cliquee(cb: CtbCombattant)
+const LARGEUR_BARRE_PX := 100.0
+const HAUTEUR_BARRE_PX := 13.0
 
 var cb: CtbCombattant
 
-var _nom: Label
 var _barre_pv: TextureProgressBar
 var _pv_txt: Label
 var _pills: HFlowContainer
-var _survol_overlay: Control
-var _actif := false
-var _ciblable := false
 
 # Nom d'affichage localisé d'un combattant CTB — TOUJOURS via Translations
 # (les champs nom_affichage_* de la ressource, l'id en secours).
@@ -38,70 +37,45 @@ static func nom_ui(d: CombattantCtbData) -> String:
 
 func _init(combattant: CtbCombattant) -> void:
 	cb = combattant
-	custom_minimum_size = Vector2(240, 0)
-	_appliquer_style()
+	alignment = BoxContainer.ALIGNMENT_CENTER
+	add_theme_constant_override("separation", 2)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 4)
-	add_child(v)
-
-	_nom = ExpeStyle.label_mono(nom_ui(cb.data), 15, UIColors.CYBER_TEXTE)
-	v.add_child(_nom)
+	_pills = HFlowContainer.new()
+	_pills.alignment = FlowContainer.ALIGNMENT_CENTER
+	_pills.add_theme_constant_override("h_separation", 2)
+	_pills.add_theme_constant_override("v_separation", 2)
+	_pills.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_pills)
 
 	_barre_pv = CombatUiSkin.barre_pv(cb.est_joueur())
-	v.add_child(_barre_pv)
+	_barre_pv.custom_minimum_size = Vector2(LARGEUR_BARRE_PX, HAUTEUR_BARRE_PX)
+	_barre_pv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_barre_pv)
 
-	# Score DANS la barre (retour Rhend 07/09/2026 : gagner la ligne dédiée
-	# qu'occupait ce texte en dessous) : Label enfant de la TextureProgressBar,
-	# étalé sur tout son rect et centré — les Control dessinent APRÈS leur
-	# parent, il rend donc bien PAR-DESSUS le remplissage.
-	_pv_txt = ExpeStyle.label_mono("", 11, UIColors.CYBER_TEXTE)
+	# Score DANS la barre (même recette que l'ancienne carte) : Label enfant
+	# de la TextureProgressBar, étalé sur tout son rect et centré.
+	_pv_txt = ExpeStyle.label_mono("", 9, UIColors.CYBER_TEXTE)
 	_pv_txt.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_pv_txt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_pv_txt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_pv_txt.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Contour sombre : le texte est maintenant posé SUR le remplissage rose de
-	# la barre, plus sur le fond sombre du panneau — sans lui, un score vert
-	# (PV haut) s'y fond.
-	_pv_txt.add_theme_constant_override("outline_size", 3)
+	_pv_txt.add_theme_constant_override("outline_size", 2)
 	_pv_txt.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	_barre_pv.add_child(_pv_txt)
 
-	_pills = HFlowContainer.new()
-	_pills.add_theme_constant_override("h_separation", 4)
-	_pills.add_theme_constant_override("v_separation", 4)
-	v.add_child(_pills)
-
-	# Liseré or « ciblable » : overlay procédural par-dessus le contenu — un
-	# PanelContainer empile TOUS ses enfants Control sur le même rect content,
-	# donc ce second enfant se superpose à `v` sans toucher sa mise en page.
-	_survol_overlay = Control.new()
-	_survol_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_survol_overlay.visible = false
-	_survol_overlay.draw.connect(_dessiner_survol)
-	_survol_overlay.resized.connect(_survol_overlay.queue_redraw)
-	add_child(_survol_overlay)
-
-	gui_input.connect(_sur_input)
 	rafraichir()
 
-func _dessiner_survol() -> void:
-	_survol_overlay.draw_rect(Rect2(Vector2.ZERO, _survol_overlay.size),
-			UIColors.SELECTION_GOLD, false, 2.0)
+# Centre le widget au-dessus du point « pied » (même point que l'ombre
+# portée) — appelé par CombatCtbUi._placer_orbes() à chaque disposition.
+func definir_position(pied: Vector2) -> void:
+	reset_size()
+	position = pied - Vector2(size.x * 0.5, size.y + 8.0)
 
-# Point d'ancrage des textes flottants (centre haut de la carte, coordonnées
-# de l'ANCÊTRE FX : l'appelant convertit depuis le global).
+# Point d'ancrage des textes flottants (au-dessus du widget, coordonnées de
+# l'ANCÊTRE FX : l'appelant convertit depuis le global).
 func centre_fx() -> Vector2:
-	return global_position + Vector2(size.x * 0.5, 8.0)
-
-func marquer_actif(on: bool) -> void:
-	_actif = on
-	_appliquer_style()
-
-func marquer_ciblable(on: bool) -> void:
-	_ciblable = on
-	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if on else Control.CURSOR_ARROW
-	_appliquer_style()
+	return global_position + Vector2(size.x * 0.5, 0.0)
 
 # Relit l'état du combattant : barre + valeurs de PV (couleur par fraction),
 # pills de statuts regroupées par type (stacks ×N, durée max restante en
@@ -112,8 +86,7 @@ func rafraichir() -> void:
 	_barre_pv.value = frac
 	_pv_txt.text = "%d / %d" % [int(roundf(cb.pv)), int(roundf(pv_max))]
 	# La barre elle-même reste au chrome de Christophe (non teintée par la
-	# fraction — choix DA) : le texte porte seul l'alerte de PV bas, l'info
-	# exacte (nombres) restant de toute façon affichée juste au-dessus.
+	# fraction — choix DA) : le texte porte seul l'alerte de PV bas.
 	_pv_txt.add_theme_color_override("font_color", _couleur_pv(frac))
 	modulate = Color(1, 1, 1, 1.0) if cb.est_vivant() else Color(0.45, 0.45, 0.45, 0.75)
 
@@ -137,9 +110,11 @@ func rafraichir() -> void:
 
 func _pill(texte: String, couleur: Color) -> Control:
 	var p := PanelContainer.new()
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_theme_stylebox_override("panel", ExpeStyle.style_chip(couleur))
-	var l := ExpeStyle.label_mono(texte, 11, couleur.lightened(0.45))
-	var m := UIHelpers.margin_of(3)
+	var l := ExpeStyle.label_mono(texte, 8, couleur.lightened(0.45))
+	var m := UIHelpers.margin_of(2)
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	m.add_child(l)
 	p.add_child(m)
 	return p
@@ -152,18 +127,3 @@ func _couleur_pv(frac: float) -> Color:
 	if frac > 0.15:
 		return UIColors.HP_LOW
 	return UIColors.HP_CRITICAL
-
-func _appliquer_style() -> void:
-	# Chrome RÉEL (CombatUiSkin) : panneau par camp, halo si actif. L'état
-	# « ciblable » reste un liseré or PROCÉDURAL par-dessus (_survol_overlay) —
-	# jeu, pas habillage, jamais dégradé.
-	add_theme_stylebox_override("panel",
-			CombatUiSkin.style_panneau_carte(cb.est_joueur(), _actif))
-	if _survol_overlay != null:
-		_survol_overlay.visible = _ciblable
-		_survol_overlay.queue_redraw()
-
-func _sur_input(ev: InputEvent) -> void:
-	if _ciblable and ev is InputEventMouseButton \
-			and ev.button_index == MOUSE_BUTTON_LEFT and ev.pressed:
-		cliquee.emit(cb)

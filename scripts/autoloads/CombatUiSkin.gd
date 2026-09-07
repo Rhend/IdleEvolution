@@ -22,13 +22,11 @@
 # `_style_texture()` l'enveloppe dans un StyleBoxTexture prêt à poser sur un
 # thème (`modulate_color` gère l'atténuation « désactivé » sans recomposer).
 #
-# Assets livrés mais PAS encore branchés (périmètre volontairement limité à un
-# reskin, pas une refonte d'info) — à ne pas considérer oubliés :
-#   • Panel_Separator_01/02/03 : liés à la table de stats détaillée du mockup
-#     (DMG/CRIT/DIST/PROT/SPEED/Ability/Status) — features non existantes.
-#   • Icone_Sapiens : pas d'usage identifié cette passe.
-#   • Cyber_Line : connecteur décoratif bouton → personnage, dynamique dans le
-#     mockup — reporté (routage dépendrait de la position du sprite).
+# Chantier UI_Concept2 (07/09/2026, retour Rhend « précision de l'intégration ») :
+# Panel_Separator_01/02/03 et Cyber_Line sont désormais BRANCHÉS —
+# `CombatPanneauStats` (panneau de stats bas d'écran) et les traits
+# bouton → héros de `CombatCtbUi._dessiner_liens_actions`. Reste sans usage
+# identifié : Icone_Sapiens.
 # ============================================================
 class_name CombatUiSkin
 
@@ -72,6 +70,24 @@ const ICONE_ARTEFACT   := preload(DOSSIER_ICONES + "UI_Icone_Artefact.png")
 
 # ── Réticule de ciblage (remplace le "▼" ASCII dessiné en scène).
 const RETICULE := preload(DOSSIER_ICONES + "UI_Icone_Arrow_2.png")
+
+# ── Soulignements décoratifs du panneau de stats (CombatPanneauStats) —
+# posés sous les labels DMG/PROT/le titre Status, HÉRO uniquement livré.
+const SEPARATEUR_01 := preload(DOSSIER + "UI_Combat_Panel_Separator_01_Hero.png")
+const SEPARATEUR_02 := preload(DOSSIER + "UI_Combat_Panel_Separator_02_Hero.png")
+const SEPARATEUR_03 := preload(DOSSIER + "UI_Combat_Panel_Separator_03_Hero.png")
+
+# ── Chevron compact (compteur de tour de la file d'initiative).
+const CHEVRON := preload(DOSSIER_ICONES + "UI_Icone_Arrow_1.png")
+
+# ── Connecteur bouton → personnage (file d'initiative + éventail d'actions).
+const CYBER_LINE := preload(DOSSIER + "UI_Combat_Cyber_Line.png")
+
+# ── Portraits par personnage (file d'initiative compacte) — AUCUN livré à ce
+# jour ; dossier + convention choisis par ce chantier (un fichier par
+# CombattantCtbData.id, ex. "hero.png"/"flamebot.png") pour que la prochaine
+# livraison n'ait qu'à y déposer les fichiers.
+const DOSSIER_PORTRAITS := "res://assets/ui/Portraits/"
 
 # Splash « ENNEMY DETECTED » (3 calques + glyphe), PARTAGÉ entre l'intro de
 # CombatCtbUi et l'écran de chargement affiché pendant sa construction
@@ -227,6 +243,53 @@ static func style_chip_tour(camp_joueur: bool, en_tete: bool) -> StyleBoxTexture
 		couches.append(aura)
 	couches.append(border)
 	return _style_texture(cle, couches)
+
+# Portrait d'UN personnage pour sa puce de file d'initiative — `null` si la
+# livraison n'a pas (encore) ce fichier ; l'appelant retombe alors sur
+# l'initiale du nom (repli propre, même esprit que SpriteSpinePersonnage face
+# à un squelette manquant).
+static func portrait(id: String) -> Texture2D:
+	var chemin := DOSSIER_PORTRAITS + id + ".png"
+	if not ResourceLoader.exists(chemin):
+		return null
+	return load(chemin) as Texture2D
+
+# ─── Panneau de stats détaillé (bas d'écran, CombatPanneauStats) ─────
+
+# Mêmes calques Back/Border que la carte de combattant (`style_panneau_carte`),
+# sans Aura : ce sont déjà de simples rectangles étirables (validé sur la
+# carte, qui les étire de 2485×541 à 240×~80 sans 9-slice), donc directement
+# réutilisables à l'aspect ratio du panneau bas, plus large.
+static func style_panneau_stats(camp_joueur: bool) -> StyleBoxTexture:
+	var back: Texture2D = PANEL_BACK_HERO if camp_joueur else PANEL_BACK_ENNEMI
+	var border: Texture2D = PANEL_BORDER_HERO if camp_joueur else PANEL_BORDER_ENNEMI
+	return _style_texture("panel_stats_%s" % str(camp_joueur), [back, border])
+
+# ─── Connecteur bouton → personnage ───────────────────────────────────
+
+static var _couleur_lien_cache := Color(0, 0, 0, 0)
+
+# Couleur du trait bouton → personnage, ÉCHANTILLONNÉE sur `CYBER_LINE` au
+# runtime (premier pixel opaque trouvé — l'asset est un simple trait uni,
+# n'importe lequel convient) plutôt que recopiée à la main : elle suit
+# Christophe si le fichier est reteinté. La géométrie, elle, reste
+# PROCÉDURALE (`CombatCtbUi._dessiner_liens_actions`) — un angle fixe ne se
+# stretch pas vers une cible arbitraire, seule la couleur vient de l'asset.
+static func couleur_lien() -> Color:
+	if _couleur_lien_cache.a <= 0.0:
+		var img := _image_de(CYBER_LINE)
+		var taille := img.get_size()
+		for y in taille.y:
+			for x in taille.x:
+				var p := img.get_pixel(x, y)
+				if p.a > 0.5:
+					_couleur_lien_cache = p
+					break
+			if _couleur_lien_cache.a > 0.0:
+				break
+		if _couleur_lien_cache.a <= 0.0:
+			_couleur_lien_cache = UIColors.CYBER_ACCENT   # repli si l'asset venait à manquer
+	return _couleur_lien_cache
 
 # ─── Curseur personnalisé ─────────────────────────────────────
 

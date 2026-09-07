@@ -295,7 +295,7 @@ const STRINGS: Dictionary = {
 		"ctb.choisir_cible":  "⊕ Cliquez votre cible (personnage ou carte)",
 		"ctb.annuler":        "Annuler",
 		"ctb.a_toi":          "Au tour de %s",
-		"ctb.file_titre":     "Ordre d'action",
+		"ctb.tour_compteur":  "Tour : %d",
 		"ctb.embuscade":      "⚡ EMBUSCADE !",
 		"ctb.embuscade_sub":  "L'ennemi frappe le premier — initiative retardée",
 		"ctb.victoire":       "VICTOIRE",
@@ -314,6 +314,17 @@ const STRINGS: Dictionary = {
 		"ctb.entete_heros":   "Nv %d · XP %d/%d · Euren (run) %d · Modules (run) %d",
 		"ctb.objet":          "🧪  Objet",
 		"ctb.choisir_objet":  "Choisir l'objet :",
+
+		# ── Panneau de stats détaillé (CombatPanneauStats, chantier UI_Concept2) ─
+		"ctb.stats.niveau":       "Niveau",
+		"ctb.stats.pv":           "PV",
+		"ctb.stats.ammo":         "Ammo",
+		"ctb.stats.dmg":          "DMG",
+		"ctb.stats.crit":         "CRIT",
+		"ctb.stats.dist":         "DIST",
+		"ctb.stats.prot":         "PROT",
+		"ctb.stats.speed":        "SPEED",
+		"ctb.stats.status_titre": "/ Statuts /",
 
 		# ── Expédition réelle (Rework Combat — chantier 8) ────
 		"expe.lancement_titre":     "PARTIR EN EXPÉDITION",
@@ -765,7 +776,7 @@ const STRINGS: Dictionary = {
 		"ctb.choisir_cible":  "⊕ Click your target (character or card)",
 		"ctb.annuler":        "Cancel",
 		"ctb.a_toi":          "%s's turn",
-		"ctb.file_titre":     "Action order",
+		"ctb.tour_compteur":  "Turn : %d",
 		"ctb.embuscade":      "⚡ AMBUSH!",
 		"ctb.embuscade_sub":  "The enemy strikes first — initiative delayed",
 		"ctb.victoire":       "VICTORY",
@@ -784,6 +795,17 @@ const STRINGS: Dictionary = {
 		"ctb.entete_heros":   "Lv %d · XP %d/%d · Euren (run) %d · Modules (run) %d",
 		"ctb.objet":          "🧪  Item",
 		"ctb.choisir_objet":  "Choose an item:",
+
+		# ── Panneau de stats détaillé (CombatPanneauStats, chantier UI_Concept2) ─
+		"ctb.stats.niveau":       "Level",
+		"ctb.stats.pv":           "PV",
+		"ctb.stats.ammo":         "Ammo",
+		"ctb.stats.dmg":          "DMG",
+		"ctb.stats.crit":         "CRIT",
+		"ctb.stats.dist":         "DIST",
+		"ctb.stats.prot":         "PROT",
+		"ctb.stats.speed":        "SPEED",
+		"ctb.stats.status_titre": "/ Status /",
 
 		# ── Expédition réelle (Rework Combat — chantier 8) ────
 		"expe.lancement_titre":     "START EXPEDITION",

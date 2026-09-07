@@ -114,7 +114,9 @@ func _test_ecran_complet() -> void:
 	_assert(interdits.is_empty(), "aucun bouton Objet (ni Compétence) dans l'écran",
 			str(interdits.map(func(b: Button) -> String: return b.text)))
 
-	# File d'initiative : N_FILE puces, ordre = prevoir_ordre (noms un à un).
+	# File d'initiative compacte : N_FILE puces, ordre = prevoir_ordre. Aucun
+	# portrait livré dans cet environnement de test → repli sur l'initiale du
+	# nom (voir CombatUiSkin.portrait), la seule chose qu'un Label expose ici.
 	var predit := m.prevoir_ordre(CombatCtbUi.N_FILE)
 	var puces := ui._file_box.get_child_count()
 	_assert(puces == CombatCtbUi.N_FILE,
@@ -122,7 +124,8 @@ func _test_ecran_complet() -> void:
 	var ordre_ok := true
 	for i in ui._file_box.get_child_count():
 		var lbl := _premier_label(ui._file_box.get_child(i))
-		if lbl == null or lbl.text != CarteCombattantCtb.nom_ui(predit[i].data):
+		var attendu := CarteCombattantCtb.nom_ui(predit[i].data).left(1).to_upper()
+		if lbl == null or lbl.text != attendu:
 			ordre_ok = false
 	_assert(ordre_ok, "ordre affiché de la file = moteur.prevoir_ordre (N=%d)"
 			% CombatCtbUi.N_FILE)
@@ -136,8 +139,9 @@ func _test_ecran_complet() -> void:
 	await _frames(4)
 	print("\n[TEST] Écran de combat — combat complet joué à la main")
 	# Jouer jusqu'à la victoire : Attaquer, cible = clic sur l'ennemi (le
-	# ciblage se fait À LA SOURIS — scène ou carte ; plus de boutons
-	# nominatifs, retour Rhend 07/2026). La carte relaie `cliquee`.
+	# ciblage se fait À LA SOURIS dans la scène — plus de boutons nominatifs,
+	# retour Rhend 07/2026 ; ici simulé par un appel direct au handler, la
+	# carte de combattant n'émettant plus de signal de clic — UI_Concept2).
 	var garde_fou := 0
 	var ciblage_verifie := false
 	while not m.termine and garde_fou < 400:
@@ -159,7 +163,10 @@ func _test_ecran_complet() -> void:
 							"zones de clic de la scène ACTIVES en mode ciblage")
 				for cb in m.combattants:
 					if not cb.est_joueur() and cb.est_vivant():
-						(ui._cartes[cb] as CarteCombattantCtb).cliquee.emit(cb)
+						# La carte n'émet plus de signal de clic (chantier
+						# UI_Concept2 : le ciblage réel passe par les zones de
+						# la scène) — même effet, appel direct du handler.
+						ui._sur_cible_cliquee(cb)
 						break
 		await _frames(2)
 	_assert(m.termine and m.victoire_joueur,

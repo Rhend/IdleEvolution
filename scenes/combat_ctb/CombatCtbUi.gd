@@ -57,14 +57,29 @@ const BANDE_VS_PX := 80.0      # largeur de la découpe diagonale des deux fonds
 const DUREE_SPLASH_S := 1.0
 const DUREE_FONDU_SPLASH_S := 0.45
 
-# Éventail des boutons d'action AUTOUR du héros (retour Rhend 07/09/2026 : la
-# DA de Christophe fait apparaître les actions à même la scène, plus une
-# barre dédiée en bas) : arc centré au-dessus du buste, ouvert vers le HAUT
-# (les cartes de statut vivent déjà à gauche des pieds — un arc plein-haut
-# les évite plutôt qu'un cercle complet).
-const ACTIONS_RAYON_PX := 170.0
-const ACTIONS_ARC_DEG := 150.0
-const ACTIONS_ARC_CENTRE_DEG := -90.0
+# Boutons d'action en DEUX COLONNES encadrant le héros, reliées à son buste
+# par un trait (chantier UI_Concept2, 07/09/2026 — le mockup fait foi :
+# remplace l'ancien arc au-dessus de la tête). Indices pairs → colonne
+# GAUCHE, impairs → DROITE (5 boutons ⇒ 3 gauche/2 droite, comme le mockup),
+# chacune étalée verticalement entre l'épaule et la hanche du héros.
+const ACTIONS_MARGE_PX := 64.0        # écart horizontal buste ↔ colonne de boutons
+const ACTIONS_HAUT_FRAC := 0.88       # bord haut de l'étalement (fraction de la hauteur rendue)
+const ACTIONS_BAS_FRAC := 0.30        # bord bas de l'étalement
+# Trait de liaison bouton → buste (asset Cyber_Line livré mais figé : la
+# géométrie ci-dessous est PROCÉDURALE, seule la couleur vient de l'asset —
+# voir CombatUiSkin.couleur_lien) : coude horizontal → diagonal → petit
+# cercle creux sur le buste, à LA MÊME HAUTEUR que le bouton.
+const LIEN_EPAISSEUR_PX := 2.0
+const LIEN_COUDE_PX := 26.0
+const LIEN_RAYON_NOEUD_PX := 4.0
+# Ancre du trait sur le buste : fraction de la largeur rendue du héros,
+# depuis son centre — À L'INTÉRIEUR de la silhouette (pas à son bord).
+# `largeur_rendue_px()` EXCLUT l'arme/VFX (hors_mesure, voir
+# SpriteSpinePersonnage) : ACTIONS_MARGE_PX compense ce budget manquant pour
+# que le bouton ne chevauche pas l'épée tenue au-dessus du corps mesuré.
+const LIEN_ANCRE_FRAC := 0.34
+# Puce carrée de la file d'initiative compacte (portraits, chantier UI_Concept2).
+const TAILLE_PUCE_TOUR := 30.0
 
 # Zoom-DUEL sur l'attaque du JOUEUR uniquement (recette Darkest Dungeon 1,
 # resserrée — retour Rhend) : l'attaquant et sa cible GLISSENT au centre de
@@ -122,8 +137,17 @@ var _orbes: Dictionary = {}    # CtbCombattant → EnergyBoule (placeholder spri
 var _sprites: Dictionary = {}  # CtbCombattant → SpriteSpinePersonnage (sprite RÉEL)
 var _ombres: Dictionary = {}   # CtbCombattant → CombatOmbrePortee (ombre au sol, sous le sprite/orbe)
 var _pieds: Dictionary = {}    # CtbCombattant → point d'appui au sol (dessin)
-var _panneau_file: PanelContainer
-var _file_box: VBoxContainer
+var _panneau_file: VBoxContainer
+var _file_box: HBoxContainer
+var _lbl_tour: Label
+var _panneau_stats: CombatPanneauStats
+# « Entité alliée en sélection » du panneau de stats — un seul allié possible
+# aujourd'hui (l'avatar), câblé ici pour qu'un futur multi-héros n'ait qu'à
+# réassigner CETTE variable (voir CombatPanneauStats).
+var _entite_alliee_selectionnee: CtbCombattant = null
+# Traits bouton → buste calculés par `_disposer_actions_deux_colonnes`,
+# peints par `_dessiner_liens_actions` (voir CombatUiSkin.couleur_lien).
+var _liens_actions: Array[Dictionary] = []
 var _bandeaux: VBoxContainer
 var _bandeau_tour: Label
 var _btn_attaquer: Button
@@ -134,8 +158,8 @@ var _btn_objet: Button = null          # créé SEULEMENT si inventaire non vide
 # (état temporaire d'un contenu possédé — ≠ contenu absent).
 var _btns_competences: Array[Button] = []
 # Boutons d'action : Control de positionnement LIBRE (retour Rhend
-# 07/09/2026, éventail autour du héros — voir _disposer_actions_autour_hero),
-# plus une HBoxContainer classique.
+# 07/09/2026, 2 colonnes encadrant le héros — voir
+# _disposer_actions_deux_colonnes), plus une HBoxContainer classique.
 var _rangee_boutons: Control
 var _rangee_cibles: HBoxContainer
 var _objet_en_attente: ConsommableData = null   # objet ciblé en attente de cible
@@ -240,15 +264,22 @@ func _construire() -> void:
 		if sprite != null:
 			_sprites[cb] = sprite
 			_sol.add_child(sprite)
-			continue
-		var orbe := EnergyBoule.new()
-		orbe.accent = ExpeStyle.accent_camp(cb.est_joueur())
-		orbe.size = ORBE_TAILLE
-		_orbes[cb] = orbe
-		_sol.add_child(orbe)
-		# Placeholder de sprite, pas un élément interactif (EnergyBoule est
-		# cliquable par défaut au Village) : souris ignorée.
-		orbe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		else:
+			var orbe := EnergyBoule.new()
+			orbe.accent = ExpeStyle.accent_camp(cb.est_joueur())
+			orbe.size = ORBE_TAILLE
+			_orbes[cb] = orbe
+			_sol.add_child(orbe)
+			# Placeholder de sprite, pas un élément interactif (EnergyBoule
+			# est cliquable par défaut au Village) : souris ignorée.
+			orbe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# HUD compact (PV + statuts) SOUS LES PIEDS de CE combattant — chantier
+		# UI_Concept2 (07/09/2026, le mockup fait foi) : plus de carte en
+		# colonne latérale. Ajoutée APRÈS le sprite/orbe pour rester visible
+		# par-dessus lui ; positionnée par `_placer_orbes()`.
+		var carte := CarteCombattantCtb.new(cb)
+		_cartes[cb] = carte
+		_sol.add_child(carte)
 	# Zones de CLIC des ennemis (ciblage à la souris) : invisibles, posées
 	# sur l'emplacement du personnage, dormantes hors mode ciblage.
 	for cb in moteur.combattants:
@@ -265,61 +296,55 @@ func _construire() -> void:
 		_zones_cible[cb] = zone
 	_placer_orbes()
 
-	# Arène scindée : cartes du camp joueur | vide central | cartes adverses —
-	# occupe maintenant tout l'écran (la barre d'actions du bas a disparu,
-	# voir plus bas).
-	var arene := HBoxContainer.new()
-	arene.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(arene)
-	var camp_joueur := _colonne_camp(arene, BoxContainer.ALIGNMENT_CENTER)
-	var milieu := Control.new()
-	milieu.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	milieu.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	arene.add_child(milieu)
-	var camp_adverse := _colonne_camp(arene, BoxContainer.ALIGNMENT_CENTER)
-	for cb in moteur.combattants:
-		var carte := CarteCombattantCtb.new(cb)
-		carte.cliquee.connect(_sur_cible_cliquee)
-		_cartes[cb] = carte
-		(camp_joueur if cb.est_joueur() else camp_adverse).add_child(carte)
+	# Panneau de stats détaillé, bas-gauche (chantier UI_Concept2) : lié à
+	# l'« entité alliée en sélection » — un seul allié possible aujourd'hui,
+	# voir `_entite_alliee_selectionnee` et `CombatPanneauStats`.
+	_entite_alliee_selectionnee = moteur.avatar()
+	_panneau_stats = CombatPanneauStats.creer(true)
+	add_child(_panneau_stats)
+	_panneau_stats.definir_combattant(_entite_alliee_selectionnee)
+	_repositionner_panel_stats()
 
-	# File d'initiative : petit encart en HAUT-DROITE (retour Rhend
-	# 07/09/2026 — auparavant centrée en haut, pleine largeur). Empilée en
-	# COLONNE (pas en rangée) : 6 noms complets tiennent bien plus étroit
-	# ainsi qu'alignés côte à côte. Repositionné À LA MAIN (`_repositionner_
-	# panneau_file`, pas un preset d'ancre posé une fois) : son contenu
-	# (chips) n'existe pas encore ici, il arrive plus tard via
-	# `_rafraichir_file()` — un ancrage figé à la construction se serait
-	# retrouvé à agrandir la boîte HORS ÉCRAN vers la droite au premier
-	# rafraîchissement (la taille minimale grandit toujours vers le bas-
-	# droite, jamais vers son ancre).
-	_panneau_file = PanelContainer.new()
-	var style_file := ExpeStyle.style_panneau(UIColors.CYBER_ACCENT, 1.0, 1, 2)
-	style_file.bg_color = UIColors.CYBER_BG   # opaque — jamais le biome au travers
-	style_file.set_content_margin_all(5)
-	_panneau_file.add_theme_stylebox_override("panel", style_file)
+	# File d'initiative compacte, HAUT-DROITE (chantier UI_Concept2 : rangée
+	# HORIZONTALE de puces carrées façon portraits, plus de colonne de noms en
+	# toutes lettres ni de gros panneau bordé — le mockup n'en a pas).
+	# Repositionné À LA MAIN (`_repositionner_panneau_file`, pas un ancrage
+	# posé une fois) : son contenu n'existe pas encore ici, il arrive via
+	# `_rafraichir_file()` — un ancrage figé se serait retrouvé à agrandir la
+	# boîte HORS ÉCRAN vers la droite au premier remplissage.
+	_panneau_file = VBoxContainer.new()
+	_panneau_file.add_theme_constant_override("separation", 4)
+	_panneau_file.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panneau_file)
-	var haut := VBoxContainer.new()
-	haut.add_theme_constant_override("separation", 1)
-	_panneau_file.add_child(haut)
-	var titre_file := ExpeStyle.label_mono(Translations.T("ctb.file_titre"), 9,
-			UIColors.CYBER_TEXTE_MUTED)
-	titre_file.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	haut.add_child(titre_file)
-	_file_box = VBoxContainer.new()
-	_file_box.add_theme_constant_override("separation", 2)
-	haut.add_child(_file_box)
+	_file_box = HBoxContainer.new()
+	_file_box.add_theme_constant_override("separation", 4)
+	_file_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panneau_file.add_child(_file_box)
+	var tour_box := HBoxContainer.new()
+	tour_box.add_theme_constant_override("separation", 4)
+	tour_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panneau_file.add_child(tour_box)
+	var chevron := TextureRect.new()
+	chevron.texture = CombatUiSkin.CHEVRON
+	chevron.custom_minimum_size = Vector2(14, 14)
+	chevron.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	chevron.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tour_box.add_child(chevron)
+	_lbl_tour = ExpeStyle.label_mono("", 13, UIColors.CYBER_ACCENT)
+	tour_box.add_child(_lbl_tour)
 	_repositionner_panneau_file()
 
-	# Boutons d'action : Control à positionnement LIBRE, en éventail autour
-	# du héros (voir _disposer_actions_autour_hero) — la barre dédiée du bas
-	# n'a plus lieu d'être, Christophe fait apparaître les actions à même la
-	# scène. `_bandeau_tour` (« Au tour de … ») et `_rangee_cibles` (invite +
-	# Annuler du ciblage, choix d'objet) restent de simples bandeaux flottants,
-	# sans le gros panneau qui les portait avant.
+	# Boutons d'action : Control à positionnement LIBRE, en 2 colonnes
+	# encadrant le héros (voir _disposer_actions_deux_colonnes) — la barre
+	# dédiée du bas n'a plus lieu d'être, Christophe fait apparaître les
+	# actions à même la scène. `_bandeau_tour` (« Au tour de … ») et
+	# `_rangee_cibles` (invite + Annuler du ciblage, choix d'objet) restent de
+	# simples bandeaux flottants, sans le gros panneau qui les portait avant.
 	_rangee_boutons = Control.new()
 	_rangee_boutons.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_rangee_boutons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rangee_boutons.draw.connect(_dessiner_liens_actions)
 	add_child(_rangee_boutons)
 	_btn_attaquer = CombatUiSkin.bouton(Translations.T("ctb.attaquer"))
 	_btn_attaquer.pressed.connect(_sur_attaquer)
@@ -366,15 +391,15 @@ func _construire() -> void:
 	_voile_contenu.alignment = BoxContainer.ALIGNMENT_CENTER
 	_voile.add_child(_voile_contenu)
 
-func _colonne_camp(parent: Control, alignement: int) -> VBoxContainer:
-	var v := VBoxContainer.new()
-	v.alignment = alignement as BoxContainer.AlignmentMode
-	v.add_theme_constant_override("separation", 10)
-	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var marge := UIHelpers.margin_of(16)
-	marge.add_child(v)
-	parent.add_child(marge)
-	return v
+# Recale le panneau de stats en BAS-GAUCHE sur sa taille minimale COURANTE —
+# même correctif que la file d'initiative : sa hauteur varie avec le nombre
+# de statuts actifs de l'entité suivie, un ancrage figé grandirait vers le
+# bas-droite au lieu de rester collé au coin de l'écran.
+func _repositionner_panel_stats() -> void:
+	if _panneau_stats == null:
+		return
+	_panneau_stats.reset_size()
+	_panneau_stats.position = Vector2(10.0, size.y - _panneau_stats.size.y - 10.0)
 
 # Recale la file d'initiative en HAUT-DROITE sur SA taille minimale COURANTE
 # (`reset_size()`) — appelé à chaque changement de contenu (`_rafraichir_
@@ -390,12 +415,17 @@ func _repositionner_panneau_file() -> void:
 
 # Même correctif pour le bandeau de tour + la rangée de ciblage : centré en
 # bas, recalé à chaque changement (texte du tour, invite/Annuler, liste
-# d'objets).
+# d'objets). Tenu AU-DESSUS du panneau de stats (bas-gauche, largeur variable
+# selon les statuts actifs) — centré sur tout l'écran, il chevaucherait sinon
+# son coin droit.
 func _repositionner_bandeaux() -> void:
 	if _bandeaux == null:
 		return
 	_bandeaux.reset_size()
-	_bandeaux.position = Vector2((size.x - _bandeaux.size.x) * 0.5, size.y - _bandeaux.size.y - 12.0)
+	var marge_bas := 12.0
+	if _panneau_stats != null:
+		marge_bas = _panneau_stats.size.y + 20.0
+	_bandeaux.position = Vector2((size.x - _bandeaux.size.x) * 0.5, size.y - _bandeaux.size.y - marge_bas)
 
 # ─── Scène de bataille : sol + emplacements (placeholder sprites) ──
 
@@ -430,6 +460,9 @@ func _placer_orbes() -> void:
 			var zone: Control = _zones_cible.get(membres[i])
 			if zone != null:
 				zone.position = pied - Vector2(zone.size.x * 0.5, zone.size.y - 12.0)
+			var carte: CarteCombattantCtb = _cartes.get(membres[i])
+			if carte != null:
+				carte.definir_position(pied)
 	_sol.queue_redraw()
 
 # Sol de la scène : la ligne d'horizon + bande dégradée qui vivait ici avant
@@ -562,38 +595,87 @@ func _montrer_actions(on: bool, acteur: CtbCombattant = null) -> void:
 		visibles.append_array(_btns_competences)
 		if _btn_objet != null:
 			visibles.append(_btn_objet)
-		_disposer_actions_autour_hero(visibles)
+		_disposer_actions_deux_colonnes(visibles)
 	if not on:
 		_bandeau_tour.text = ""
 		_mettre_cibles_en_avant(false)
+		_liens_actions.clear()
+		if _rangee_boutons != null:
+			_rangee_boutons.queue_redraw()
 	_repositionner_bandeaux()
 
-# Éventail des boutons d'action autour du buste du héros (voir
-# ACTIONS_RAYON_PX/_ARC_DEG/_ARC_CENTRE_DEG) : chaque bouton est centré sur
-# un point RÉPARTI ÉGALEMENT sur l'arc — `reset_size()` d'abord, la largeur
-# varie avec le texte (compétences grisées « (n) », objets « ×N »).
-func _disposer_actions_autour_hero(boutons: Array) -> void:
+# Boutons d'action en 2 COLONNES encadrant le buste du héros (retour Rhend,
+# chantier UI_Concept2 — le mockup fait foi, remplace l'ancien arc au-dessus
+# de la tête). Indices pairs → colonne GAUCHE, impairs → DROITE (5 boutons ⇒
+# 3 gauche/2 droite, comme le mockup Attack/Block/Move | Object/Capacity),
+# chacune étalée verticalement entre l'épaule et la hanche. Calcule ET
+# stocke un segment de trait par bouton (`_liens_actions`), peint ensuite par
+# `_dessiner_liens_actions` — `reset_size()` d'abord, la largeur des boutons
+# varie avec leur texte (compétences grisées « (n) », objets « ×N »).
+func _disposer_actions_deux_colonnes(boutons: Array) -> void:
+	_liens_actions.clear()
 	if boutons.is_empty() or _sol == null or _sol.size.x <= 0.0:
+		if _rangee_boutons != null:
+			_rangee_boutons.queue_redraw()
 		return
 	var avatar := moteur.avatar()
 	var pied: Vector2 = _pieds.get(avatar,
 			Vector2(_sol.size.x * SOL_X_JOUEUR, _sol.size.y * SOL_Y_FRAC))
 	var hauteur := ORBE_TAILLE.y
+	var largeur := ORBE_TAILLE.x
 	var sprite: SpriteSpinePersonnage = _sprites.get(avatar)
 	if sprite != null:
 		var h := sprite.hauteur_rendue_px()
 		if h > 0.0:
 			hauteur = h
-	var foyer := pied - Vector2(0.0, hauteur * 0.55)
-	var n := boutons.size()
-	for i in n:
-		var t := 0.5 if n == 1 else float(i) / float(n - 1)
-		var angle_deg := ACTIONS_ARC_CENTRE_DEG - ACTIONS_ARC_DEG * 0.5 + ACTIONS_ARC_DEG * t
-		var angle := deg_to_rad(angle_deg)
-		var point := foyer + Vector2(cos(angle), sin(angle)) * ACTIONS_RAYON_PX
-		var b: Control = boutons[i]
-		b.reset_size()
-		b.position = point - b.size * 0.5
+		var l := sprite.largeur_rendue_px()
+		if l > 0.0:
+			largeur = l
+	var colonnes: Array = [[], []]   # [gauche, droite]
+	for i in boutons.size():
+		colonnes[i % 2].append(boutons[i])
+	var haut := pied.y - hauteur * ACTIONS_HAUT_FRAC
+	var bas := pied.y - hauteur * ACTIONS_BAS_FRAC
+	for c in 2:
+		var a_droite := c == 1
+		var colonne: Array = colonnes[c]
+		var x := pied.x + (1.0 if a_droite else -1.0) * (largeur * 0.5 + ACTIONS_MARGE_PX)
+		var n: int = colonne.size()
+		for i in n:
+			var t := 0.5 if n == 1 else float(i) / float(n - 1)
+			var y := lerpf(haut, bas, t)
+			var b: Control = colonne[i]
+			b.reset_size()
+			var centre := Vector2(x, y)
+			b.position = centre - b.size * 0.5
+			var bord_x := centre.x - b.size.x * 0.5 if a_droite else centre.x + b.size.x * 0.5
+			var ancre_x := pied.x + (1.0 if a_droite else -1.0) * largeur * LIEN_ANCRE_FRAC
+			_liens_actions.append({
+				"depart": Vector2(bord_x, y), "arrivee": Vector2(ancre_x, y), "a_droite": a_droite,
+			})
+	if _rangee_boutons != null:
+		_rangee_boutons.queue_redraw()
+
+# Coude horizontal → diagonal → petit cercle creux (langage visuel de
+# UI_Combat_Cyber_Line.png, dont la COULEUR vient de CombatUiSkin.
+# couleur_lien — mais dont la GÉOMÉTRIE est procédurale : un angle figé ne se
+# stretch pas vers une cible arbitraire). Le pas horizontal du coude est
+# borné à la moitié du trajet : jamais de dépassement de l'ancre, même sur un
+# personnage/bouton très rapprochés.
+func _dessiner_liens_actions() -> void:
+	if _rangee_boutons == null or _liens_actions.is_empty():
+		return
+	var couleur := CombatUiSkin.couleur_lien()
+	for lien: Dictionary in _liens_actions:
+		var depart: Vector2 = lien["depart"]
+		var arrivee: Vector2 = lien["arrivee"]
+		var dx := arrivee.x - depart.x
+		var pas := clampf(absf(dx) * 0.5, 0.0, LIEN_COUDE_PX)
+		var coude := Vector2(depart.x + signf(dx) * pas, depart.y)
+		_rangee_boutons.draw_line(depart, coude, couleur, LIEN_EPAISSEUR_PX, true)
+		_rangee_boutons.draw_line(coude, arrivee, couleur, LIEN_EPAISSEUR_PX, true)
+		_rangee_boutons.draw_arc(arrivee, LIEN_RAYON_NOEUD_PX, 0.0, TAU, 16, couleur,
+				LIEN_EPAISSEUR_PX, true)
 
 func _sur_attaquer() -> void:
 	if not _btn_attaquer.visible:
@@ -720,9 +802,9 @@ func _valider_action(action: Dictionary) -> void:
 
 func _mettre_cibles_en_avant(on: bool) -> void:
 	_ciblage_actif = on
-	for cb: CtbCombattant in _cartes:
-		(_cartes[cb] as CarteCombattantCtb).marquer_ciblable(
-				on and not cb.est_joueur() and cb.est_vivant())
+	# L'anneau or « ciblable » vit dans la scène (_dessiner_sol) — plus de
+	# liseré dupliqué sur une carte depuis que le HUD par combattant a quitté
+	# la colonne latérale (chantier UI_Concept2).
 	# Zones de clic de la scène : ACTIVES seulement en mode ciblage (le reste
 	# du temps la scène est purement décorative — souris ignorée).
 	for cb: CtbCombattant in _zones_cible:
@@ -733,8 +815,8 @@ func _mettre_cibles_en_avant(on: bool) -> void:
 	if _sol != null:
 		_sol.queue_redraw()
 
-# Zone de clic d'un ennemi : clic gauche = choisir cette cible (mêmes gardes
-# que le clic sur la carte — _sur_cible_cliquee ignore hors mode ciblage).
+# Zone de clic d'un ennemi : clic gauche = choisir cette cible
+# (_sur_cible_cliquee ignore hors mode ciblage — seule garde nécessaire).
 func _sur_zone_input(ev: InputEvent, cb: CtbCombattant) -> void:
 	if ev is InputEventMouseButton and ev.button_index == MOUSE_BUTTON_LEFT and ev.pressed:
 		_sur_cible_cliquee(cb)
@@ -759,31 +841,53 @@ func _ennemis_vivants() -> Array[CtbCombattant]:
 func _rafraichir_tout() -> void:
 	for cb: CtbCombattant in _cartes:
 		(_cartes[cb] as CarteCombattantCtb).rafraichir()
+	if _panneau_stats != null:
+		_panneau_stats.rafraichir()
+		_repositionner_panel_stats()
 	_rafraichir_file()
 	_rafraichir_orbes()
 
-# File d'initiative : ordre des N_FILE prochaines activations (sans valeurs
-# numériques — l'ordre suffit), recalculée après chaque action.
+# File d'initiative compacte : rangée HORIZONTALE de puces carrées façon
+# portraits (chantier UI_Concept2 — remplace la colonne de noms en toutes
+# lettres). Portrait réel si `CombatUiSkin.portrait(id)` en trouve un, sinon
+# repli sur l'initiale du nom (aucun portrait livré à ce jour — Christophe
+# les pousse prochainement, voir CombatUiSkin.DOSSIER_PORTRAITS). Ordre des
+# N_FILE prochaines activations, recalculé après chaque action.
 func _rafraichir_file() -> void:
 	UIHelpers.clear_children_now(_file_box)
 	var predits := moteur.prevoir_ordre(N_FILE)
 	for i in predits.size():
 		var cb: CtbCombattant = predits[i]
 		var chip := PanelContainer.new()
+		chip.custom_minimum_size = Vector2(TAILLE_PUCE_TOUR, TAILLE_PUCE_TOUR)
 		# Cadre RÉEL de Christophe (Turn_back/Border) : halo (Aura) sur la
 		# PROCHAINE activation (i == 0) pour la faire ressortir de la file.
 		chip.add_theme_stylebox_override("panel",
 				CombatUiSkin.style_chip_tour(cb.est_joueur(), i == 0))
-		var m := UIHelpers.margin_of(2)
-		m.add_child(ExpeStyle.label_mono(CarteCombattantCtb.nom_ui(cb.data), 9,
-				ExpeStyle.accent_camp(cb.est_joueur()).lightened(0.35)))
-		chip.add_child(m)
+		var portrait := CombatUiSkin.portrait(cb.data.id)
+		if portrait != null:
+			var tr := TextureRect.new()
+			tr.texture = portrait
+			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			tr.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			chip.add_child(tr)
+		else:
+			var initiale := CarteCombattantCtb.nom_ui(cb.data).left(1).to_upper()
+			var lbl := ExpeStyle.label_mono(initiale, 13,
+					ExpeStyle.accent_camp(cb.est_joueur()).lightened(0.35))
+			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			chip.add_child(lbl)
 		_file_box.add_child(chip)
+	if _lbl_tour != null:
+		_lbl_tour.text = Translations.T("ctb.tour_compteur") % moteur.nb_activations
 	_repositionner_panneau_file()
 
 func _marquer_actif(c: CtbCombattant) -> void:
-	for cb: CtbCombattant in _cartes:
-		(_cartes[cb] as CarteCombattantCtb).marquer_actif(cb == c)
+	# Le halo « c'est ton tour » vit sur l'ombre portée (CombatOmbrePortee) —
+	# plus de doublon sur une carte depuis le chantier UI_Concept2.
 	for cb: CtbCombattant in _ombres:
 		(_ombres[cb] as CombatOmbrePortee).definir_actif(cb == c)
 
