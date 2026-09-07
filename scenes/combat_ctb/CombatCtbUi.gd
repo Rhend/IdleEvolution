@@ -158,6 +158,8 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP   # bloque la carte en dessous
 	_construire()
+	CombatUiSkin.installer_curseur()
+	tree_exiting.connect(CombatUiSkin.retirer_curseur)
 	moteur.evenement.connect(_sur_evenement)
 	moteur.victoire.connect(func(r: Dictionary) -> void: _recap = r)
 	moteur.defaite.connect(func(r: Dictionary) -> void: _recap = r)
@@ -305,10 +307,10 @@ func _construire() -> void:
 	_rangee_boutons.alignment = BoxContainer.ALIGNMENT_CENTER
 	_rangee_boutons.add_theme_constant_override("separation", 12)
 	bas_v.add_child(_rangee_boutons)
-	_btn_attaquer = ExpeStyle.bouton(Translations.T("ctb.attaquer"), UIColors.CYBER_ACCENT)
+	_btn_attaquer = CombatUiSkin.bouton(Translations.T("ctb.attaquer"))
 	_btn_attaquer.pressed.connect(_sur_attaquer)
 	_rangee_boutons.add_child(_btn_attaquer)
-	_btn_defendre = ExpeStyle.bouton(Translations.T("ctb.defendre"), UIColors.SHIELD)
+	_btn_defendre = CombatUiSkin.bouton(Translations.T("ctb.defendre"))
 	_btn_defendre.pressed.connect(func() -> void:
 		_valider_action({"type": Enums.ActionCtb.DEFENDRE}))
 	_rangee_boutons.add_child(_btn_defendre)
@@ -419,9 +421,11 @@ func _dessiner_sol() -> void:
 						Color(UIColors.SELECTION_GOLD, 0.35), 1.0)
 			_sol.draw_set_transform(Vector2.ZERO)
 			if fort:
-				_sol.draw_string(ExpeStyle.police_mono(),
-						pied + Vector2(-8.0, -76.0), "▼",
-						HORIZONTAL_ALIGNMENT_CENTER, 16.0, 14, UIColors.SELECTION_GOLD)
+				# Réticule RÉEL (Icone_Arrow_2, Christophe) — remplace le "▼"
+				# ASCII ; couleur native de l'icône, l'anneau or ci-dessus
+				# reste le signal « ciblable » du langage projet.
+				_sol.draw_texture_rect(CombatUiSkin.RETICULE,
+						Rect2(pied + Vector2(-12.0, -92.0), Vector2(24.0, 24.0)), false)
 
 # Un personnage mort disparaît de la scène (l'ellipse d'emplacement reste) ;
 # un sprite Spine joue son animation Death et TIENT la pose (pas de fondu) —
@@ -490,9 +494,8 @@ func _montrer_actions(on: bool, acteur: CtbCombattant = null) -> void:
 		for comp: CompetenceCtbData in acteur.data.competences:
 			var nom := Translations.resource_name(comp, comp.id)
 			var prete := acteur.competence_prete(comp)
-			var b := ExpeStyle.bouton(
-					nom if prete else "%s (%d)" % [nom, acteur.cooldown_restant(comp)],
-					UIColors.CYBER_ACCENT_2)
+			var b := CombatUiSkin.bouton(
+					nom if prete else "%s (%d)" % [nom, acteur.cooldown_restant(comp)])
 			b.disabled = not prete
 			b.pressed.connect(_sur_competence.bind(comp))
 			_rangee_boutons.add_child(b)
@@ -506,7 +509,7 @@ func _montrer_actions(on: bool, acteur: CtbCombattant = null) -> void:
 	if on and inventaire_fournisseur.is_valid():
 		var inv: Array = inventaire_fournisseur.call()
 		if not inv.is_empty():
-			_btn_objet = ExpeStyle.bouton(Translations.T("ctb.objet"), UIColors.CYBER_BUTIN)
+			_btn_objet = CombatUiSkin.bouton(Translations.T("ctb.objet"))
 			_btn_objet.pressed.connect(_sur_objet)
 			_rangee_boutons.add_child(_btn_objet)
 	UIHelpers.clear_children_now(_rangee_cibles)
@@ -554,8 +557,7 @@ func _montrer_choix_cibles(_vivants: Array[CtbCombattant]) -> void:
 			Translations.T("ctb.choisir_cible"), 12, UIColors.SELECTION_GOLD)
 	invite.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_rangee_cibles.add_child(invite)
-	var annuler := ExpeStyle.bouton(Translations.T("ctb.annuler"),
-			UIColors.CYBER_TEXTE_MUTED, 13, Vector2(0, 34))
+	var annuler := CombatUiSkin.bouton(Translations.T("ctb.annuler"), 13, Vector2(0, 34))
 	annuler.pressed.connect(func() -> void:
 		_objet_en_attente = null
 		_competence_en_attente = null
@@ -584,13 +586,12 @@ func _sur_objet() -> void:
 		var grp: Dictionary = groupes[id]
 		var objet := grp["objet"] as ConsommableData
 		var nom := Translations.resource_name(objet, objet.id)
-		var b := ExpeStyle.bouton(
+		var b := CombatUiSkin.bouton(
 				nom if int(grp["n"]) == 1 else "%s ×%d" % [nom, int(grp["n"])],
-				UIColors.CYBER_BUTIN, 13, Vector2(0, 34))
+				13, Vector2(0, 34))
 		b.pressed.connect(_sur_objet_choisi.bind(objet))
 		_rangee_cibles.add_child(b)
-	var annuler := ExpeStyle.bouton(Translations.T("ctb.annuler"),
-			UIColors.CYBER_TEXTE_MUTED, 13, Vector2(0, 34))
+	var annuler := CombatUiSkin.bouton(Translations.T("ctb.annuler"), 13, Vector2(0, 34))
 	annuler.pressed.connect(func() -> void:
 		UIHelpers.clear_children_now(_rangee_cibles))
 	_rangee_cibles.add_child(annuler)
@@ -683,13 +684,17 @@ func _rafraichir_tout() -> void:
 # numériques — l'ordre suffit), recalculée après chaque action.
 func _rafraichir_file() -> void:
 	UIHelpers.clear_children_now(_file_box)
-	for cb in moteur.prevoir_ordre(N_FILE):
-		var couleur := ExpeStyle.accent_camp(cb.est_joueur())
+	var predits := moteur.prevoir_ordre(N_FILE)
+	for i in predits.size():
+		var cb: CtbCombattant = predits[i]
 		var chip := PanelContainer.new()
-		chip.add_theme_stylebox_override("panel", ExpeStyle.style_chip(couleur))
+		# Cadre RÉEL de Christophe (Turn_back/Border) : halo (Aura) sur la
+		# PROCHAINE activation (i == 0) pour la faire ressortir de la file.
+		chip.add_theme_stylebox_override("panel",
+				CombatUiSkin.style_chip_tour(cb.est_joueur(), i == 0))
 		var m := UIHelpers.margin_of(4)
 		m.add_child(ExpeStyle.label_mono(CarteCombattantCtb.nom_ui(cb.data), 11,
-				couleur.lightened(0.35)))
+				ExpeStyle.accent_camp(cb.est_joueur()).lightened(0.35)))
 		chip.add_child(m)
 		_file_box.add_child(chip)
 
@@ -872,7 +877,42 @@ func _flotter(cb: CtbCombattant, texte: String, taille: int, couleur: Color,
 # ─── Transitions de bataille (placeholder assumé) ────────────
 
 # Fondu d'ouverture (carte → combat) + annonce d'embuscade le cas échéant.
+# Splash RÉEL de Christophe (« ENNEMY DETECTED », UI_Concept1.png) : fond +
+# circuit rouge + glyphe Artefact + lances, posés SOUS le texte (_voile_contenu
+# reste au sommet de `_voile`) et retirés avec elle en fin d'intro — l'outro
+# (victoire/défaite) réutilise `_voile` SANS ce décor.
 func _intro() -> void:
+	var visuel := Control.new()
+	visuel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	visuel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_voile.add_child(visuel)
+	_voile.move_child(visuel, 0)
+	for texture in [CombatUiSkin.INTRO_BACK, CombatUiSkin.INTRO_BACK_CYBER,
+			CombatUiSkin.INTRO_SPEAR]:
+		var couche := TextureRect.new()
+		couche.texture = texture
+		# EXPAND_IGNORE_SIZE : sans lui, le TextureRect garde la taille NATIVE
+		# de la texture (4770×2655) au lieu de suivre son rect — même piège
+		# déjà rencontré dans HoloTooltip.gd. STRETCH_SCALE (pas d'aspect)
+		# partout : les 3 calques partagent EXACTEMENT le même canevas source,
+		# un mode différent désalignerait les lances par rapport au circuit.
+		couche.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		couche.stretch_mode = TextureRect.STRETCH_SCALE
+		couche.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		couche.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		visuel.add_child(couche)
+	var glyphe := TextureRect.new()
+	glyphe.texture = CombatUiSkin.ICONE_ARTEFACT
+	glyphe.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glyphe.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	glyphe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glyphe.set_anchors_preset(Control.PRESET_CENTER)
+	glyphe.offset_left = -90.0
+	glyphe.offset_top = -90.0
+	glyphe.offset_right = 90.0
+	glyphe.offset_bottom = 90.0
+	visuel.add_child(glyphe)
+
 	var titre := ExpeStyle.label_mono(Translations.T("ctb.combat_titre"), 34,
 			UIColors.CYBER_ACCENT)
 	titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -900,10 +940,13 @@ func _intro() -> void:
 		return
 	if facteur_delais > 0.0:
 		var tw := create_tween()
+		tw.set_parallel(true)
 		tw.tween_property(_voile, "color:a", 0.0, 0.45)
+		tw.tween_property(visuel, "modulate:a", 0.0, 0.45)
 		await tw.finished
 	else:
 		_voile.color.a = 0.0
+	visuel.queue_free()
 	_voile.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UIHelpers.clear_children_now(_voile_contenu)
 

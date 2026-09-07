@@ -1,11 +1,17 @@
 # ============================================================
 # CarteCombattantCtb — Carte d'UN combattant dans l'écran de combat CTB
-# (Rework Combat, chantier 5). Placeholder propre : nom, barre + valeurs de
-# PV, pills de statuts DoT (type, stacks, durée restante en activations),
-# marqueur de garde (Défendre). 100 % construite en code (règle projet).
+# (Rework Combat, chantier 5). Nom, barre + valeurs de PV, pills de statuts
+# DoT (type, stacks, durée restante en activations), marqueur de garde
+# (Défendre). 100 % construite en code (règle projet).
+#
+# Chrome RÉEL de Christophe depuis 09/2026 (`CombatUiSkin`, livraison « Ui
+# combat ») : panneau Back/Border/Aura par camp, barre de PV Back/Life/Border
+# (TextureProgressBar). Le liseré OR « ciblable » reste procédural
+# (`_survol_overlay`) : aucune texture or n'a été livrée et c'est un état de
+# JEU, pas un habillage — jamais dégradé par le skin.
 #
 # États visuels pilotés par l'écran (CombatCtbUi) :
-#   • marquer_actif(bool)   — liseré clair : c'est l'activation de ce combattant
+#   • marquer_actif(bool)   — halo (Aura) : c'est l'activation de ce combattant
 #   • marquer_ciblable(bool)— liseré or + clic = choisir pour cible (signal cliquee)
 # `rafraichir()` relit tout depuis le CtbCombattant (source de vérité).
 # `centre_fx()` : point d'ancrage des dégâts flottants (coordonnées écran).
@@ -17,12 +23,11 @@ signal cliquee(cb: CtbCombattant)
 
 var cb: CtbCombattant
 
-var _couleur_camp: Color
 var _nom: Label
-var _barre_pv: ProgressBar
-var _barre_fill: StyleBoxFlat
+var _barre_pv: TextureProgressBar
 var _pv_txt: Label
 var _pills: HFlowContainer
+var _survol_overlay: Control
 var _actif := false
 var _ciblable := false
 
@@ -33,8 +38,6 @@ static func nom_ui(d: CombattantCtbData) -> String:
 
 func _init(combattant: CtbCombattant) -> void:
 	cb = combattant
-	# Accents de camp de la peau cyberpunk (cyan joueur / magenta adverse).
-	_couleur_camp = ExpeStyle.accent_camp(cb.est_joueur())
 	custom_minimum_size = Vector2(240, 0)
 	_appliquer_style()
 
@@ -45,15 +48,7 @@ func _init(combattant: CtbCombattant) -> void:
 	_nom = ExpeStyle.label_mono(nom_ui(cb.data), 15, UIColors.CYBER_TEXTE)
 	v.add_child(_nom)
 
-	_barre_pv = ProgressBar.new()
-	_barre_pv.show_percentage = false
-	_barre_pv.custom_minimum_size = Vector2(0, 12)
-	_barre_pv.min_value = 0.0
-	_barre_pv.max_value = 1.0
-	var barre_fond := UIHelpers.card_style(UIColors.BG_BAR, 0.9, 0.4, 1, 3)
-	_barre_fill = UIHelpers.card_style(UIColors.HP_HIGH, 0.95, 0.0, 0, 3)
-	_barre_pv.add_theme_stylebox_override("background", barre_fond)
-	_barre_pv.add_theme_stylebox_override("fill", _barre_fill)
+	_barre_pv = CombatUiSkin.barre_pv(cb.est_joueur())
 	v.add_child(_barre_pv)
 
 	_pv_txt = ExpeStyle.label_mono("", 12, UIColors.CYBER_TEXTE)
@@ -64,8 +59,22 @@ func _init(combattant: CtbCombattant) -> void:
 	_pills.add_theme_constant_override("v_separation", 4)
 	v.add_child(_pills)
 
+	# Liseré or « ciblable » : overlay procédural par-dessus le contenu — un
+	# PanelContainer empile TOUS ses enfants Control sur le même rect content,
+	# donc ce second enfant se superpose à `v` sans toucher sa mise en page.
+	_survol_overlay = Control.new()
+	_survol_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_survol_overlay.visible = false
+	_survol_overlay.draw.connect(_dessiner_survol)
+	_survol_overlay.resized.connect(_survol_overlay.queue_redraw)
+	add_child(_survol_overlay)
+
 	gui_input.connect(_sur_input)
 	rafraichir()
+
+func _dessiner_survol() -> void:
+	_survol_overlay.draw_rect(Rect2(Vector2.ZERO, _survol_overlay.size),
+			UIColors.SELECTION_GOLD, false, 2.0)
 
 # Point d'ancrage des textes flottants (centre haut de la carte, coordonnées
 # de l'ANCÊTRE FX : l'appelant convertit depuis le global).
@@ -88,8 +97,11 @@ func rafraichir() -> void:
 	var pv_max := cb.stat_finale("pv_max")
 	var frac := cb.pv / maxf(pv_max, 0.001)
 	_barre_pv.value = frac
-	_barre_fill.bg_color = _couleur_pv(frac)
 	_pv_txt.text = "%d / %d" % [int(roundf(cb.pv)), int(roundf(pv_max))]
+	# La barre elle-même reste au chrome de Christophe (non teintée par la
+	# fraction — choix DA) : le texte porte seul l'alerte de PV bas, l'info
+	# exacte (nombres) restant de toute façon affichée juste au-dessus.
+	_pv_txt.add_theme_color_override("font_color", _couleur_pv(frac))
 	modulate = Color(1, 1, 1, 1.0) if cb.est_vivant() else Color(0.45, 0.45, 0.45, 0.75)
 
 	UIHelpers.clear_children_now(_pills)
@@ -129,18 +141,14 @@ func _couleur_pv(frac: float) -> Color:
 	return UIColors.HP_CRITICAL
 
 func _appliquer_style() -> void:
-	# Peau cyberpunk : bordure fine au camp ; les ÉTATS restent des infos de
-	# jeu (or = ciblable, éclairci = activation en cours) — jamais dégradés.
-	var c := _couleur_camp
-	var epaisseur := 1
-	if _ciblable:
-		c = UIColors.SELECTION_GOLD
-		epaisseur = 2
-	elif _actif:
-		c = _couleur_camp.lightened(0.5)
-		epaisseur = 2
-	var style := ExpeStyle.style_panneau(c, 0.88, epaisseur, 2)
-	add_theme_stylebox_override("panel", style)
+	# Chrome RÉEL (CombatUiSkin) : panneau par camp, halo si actif. L'état
+	# « ciblable » reste un liseré or PROCÉDURAL par-dessus (_survol_overlay) —
+	# jeu, pas habillage, jamais dégradé.
+	add_theme_stylebox_override("panel",
+			CombatUiSkin.style_panneau_carte(cb.est_joueur(), _actif))
+	if _survol_overlay != null:
+		_survol_overlay.visible = _ciblable
+		_survol_overlay.queue_redraw()
 
 func _sur_input(ev: InputEvent) -> void:
 	if _ciblable and ev is InputEventMouseButton \

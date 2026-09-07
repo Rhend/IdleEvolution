@@ -1,0 +1,205 @@
+# ============================================================
+# CombatUiSkin — DA RÉELLE de Christophe pour l'écran de combat CTB
+# (livraison « Ui combat », 07/09/2026). class_name statique (pattern
+# ExpeStyle/Balance/UIHelpers, PAS un autoload).
+#
+# Remplace, POUR L'ÉCRAN DE COMBAT SEULEMENT, la peau cyberpunk intérimaire
+# (`ExpeStyle`/`UIColors.CYBER_*`) par les textures livrées :
+# `assets/ui/Combat/*.png` + `assets/ui/Icone/*.png` + `assets/ui/UI_Cursor.png`.
+# Les autres écrans d'expédition (lancement, carte, recap, Game Over) restent
+# sur la peau intérimaire — elle n'a pas encore reçu sa propre DA.
+#
+# ⚠ ROUGE (`*_Ennemis`) : la règle projet « rouge réservé à l'Artefact/danger »
+# visait la peau intérimaire. Christophe livre ICI un rouge net pour tout le
+# camp adverse (boutons/panneaux/HP/portraits) — c'est un choix de chara design
+# assumé (mockups `assets/ui/UI_Concept2..4.png`), pas une régression : la
+# règle ne s'applique plus à cet écran une fois sa vraie DA posée.
+#
+# Chaque famille d'assets est livrée en couches à EMPILER (mêmes dimensions
+# entre couches d'une même famille) : *_Back (fond plein), *_Border (contour,
+# transparent au centre), *_Aura (halo, optionnel) — jamais un seul fichier
+# « fini ». `_composer()` les fusionne UNE fois en une texture (cache par clé),
+# `_style_texture()` l'enveloppe dans un StyleBoxTexture prêt à poser sur un
+# thème (`modulate_color` gère l'atténuation « désactivé » sans recomposer).
+#
+# Assets livrés mais PAS encore branchés (périmètre volontairement limité à un
+# reskin, pas une refonte d'info) — à ne pas considérer oubliés :
+#   • Panel_Separator_01/02/03 : liés à la table de stats détaillée du mockup
+#     (DMG/CRIT/DIST/PROT/SPEED/Ability/Status) — features non existantes.
+#   • Icone_Sapiens : pas d'usage identifié cette passe.
+#   • Cyber_Line : connecteur décoratif bouton → personnage, dynamique dans le
+#     mockup — reporté (routage dépendrait de la position du sprite).
+# ============================================================
+class_name CombatUiSkin
+
+const DOSSIER := "res://assets/ui/Combat/"
+const DOSSIER_ICONES := "res://assets/ui/Icone/"
+
+# ── Bouton d'action (Attaquer/Défendre/Compétence/Objet/Annuler) : TOUJOURS
+# le camp joueur, l'IA n'affiche jamais de bouton. Le mockup n'a qu'UN style
+# de bouton pour toutes les actions — le texte seul distingue leur nature.
+const BOUTON_BACK   := preload(DOSSIER + "UI_Combat_Bouton_Back_Hero.png")
+const BOUTON_BORDER := preload(DOSSIER + "UI_Combat_Bouton_Border_Hero.png")
+const BOUTON_AURA   := preload(DOSSIER + "UI_Combat_Bouton_Aura_Hero.png")
+
+# ── Panneau de carte combattant (par camp).
+const PANEL_BACK_HERO     := preload(DOSSIER + "UI_Combat_Panel_Back_Hero.png")
+const PANEL_BORDER_HERO   := preload(DOSSIER + "UI_Combat_Panel_Border_Hero.png")
+const PANEL_AURA_HERO     := preload(DOSSIER + "UI_Combat_Panel_Aura_Hero.png")
+const PANEL_BACK_ENNEMI   := preload(DOSSIER + "UI_Combat_Panel_Back_Ennemis.png")
+const PANEL_BORDER_ENNEMI := preload(DOSSIER + "UI_Combat_Panel_Border_Ennemis.png")
+const PANEL_AURA_ENNEMI   := preload(DOSSIER + "UI_Combat_Panel_Aura_Ennemis.png")
+
+# ── Barre de PV (TextureProgressBar : under/progress/over natifs, les trois
+# calques partagent exactement la même taille source — fait pour ça).
+const HP_BACK           := preload(DOSSIER + "UI_Combat_HP_Back.png")
+const HP_LIFE           := preload(DOSSIER + "UI_Combat_HP_Life.png")
+const HP_BORDER_HERO    := preload(DOSSIER + "UI_Combat_HP_Border_Hero.png")
+const HP_BORDER_ENNEMI  := preload(DOSSIER + "UI_Combat_HP_Border_Ennemis.png")
+
+# ── Cadre de la file d'initiative (par camp), halo pour l'entrée en tête.
+const TOUR_BACK           := preload(DOSSIER + "UI_Combat_Turn_back.png")
+const TOUR_BORDER_HERO    := preload(DOSSIER + "UI_Combat_Turn_Border_Hero.png")
+const TOUR_BORDER_ENNEMI  := preload(DOSSIER + "UI_Combat_Turn_Border_Ennemis.png")
+const TOUR_AURA_HERO      := preload(DOSSIER + "UI_Combat_Turn_back_Aura_Hero.png")
+const TOUR_AURA_ENNEMI    := preload(DOSSIER + "UI_Combat_Turn_back_Aura_Ennemis.png")
+
+# ── Splash d'intro (« ENNEMY DETECTED », voir UI_Concept1.png).
+const INTRO_BACK       := preload(DOSSIER + "UI_Combat_Intro_Back.png")
+const INTRO_BACK_CYBER := preload(DOSSIER + "UI_Combat_Intro_Back_Cyber.png")
+const INTRO_SPEAR      := preload(DOSSIER + "UI_Combat_Intro_Spear_Artefact.png")
+const ICONE_ARTEFACT   := preload(DOSSIER_ICONES + "UI_Icone_Artefact.png")
+
+# ── Réticule de ciblage (remplace le "▼" ASCII dessiné en scène).
+const RETICULE := preload(DOSSIER_ICONES + "UI_Icone_Arrow_2.png")
+
+# ── Curseur personnalisé (source 1032×1032 — Godot plafonne un curseur à
+# 256×256 ; redimensionné une fois, en cache).
+const CURSEUR_SOURCE := preload("res://assets/ui/UI_Cursor.png")
+const CURSEUR_TAILLE_PX := 48
+const CURSEUR_HOTSPOT := Vector2(4, 4)   # pointe de la flèche, coin haut-gauche
+
+static var _cache_textures: Dictionary = {}   # clé (String) → ImageTexture composée
+static var _curseur_texture: ImageTexture = null
+
+# ─── Composition de couches (Back [+ Aura] + Border) ─────────
+
+static func _image_de(tex: Texture2D) -> Image:
+	var img := tex.get_image()
+	img.convert(Image.FORMAT_RGBA8)
+	return img
+
+static func _composer(couches: Array) -> ImageTexture:
+	var base: Image = _image_de(couches[0])
+	for i in range(1, couches.size()):
+		var c: Image = _image_de(couches[i])
+		base.blend_rect(c, Rect2i(Vector2i.ZERO, c.get_size()), Vector2i.ZERO)
+	return ImageTexture.create_from_image(base)
+
+static func _texture_composee(cle: String, couches: Array) -> ImageTexture:
+	if not _cache_textures.has(cle):
+		_cache_textures[cle] = _composer(couches)
+	return _cache_textures[cle]
+
+static func _style_texture(cle: String, couches: Array, alpha := 1.0) -> StyleBoxTexture:
+	var s := StyleBoxTexture.new()
+	s.texture = _texture_composee(cle, couches)
+	s.modulate_color = Color(1, 1, 1, alpha)
+	return s
+
+# ─── Bouton d'action ──────────────────────────────────────────
+
+static func _style_bouton(etat: String) -> StyleBoxTexture:
+	match etat:
+		"survol", "presse":
+			return _style_texture("bouton_survol", [BOUTON_BACK, BOUTON_AURA, BOUTON_BORDER])
+		"desactive":
+			return _style_texture("bouton_normal", [BOUTON_BACK, BOUTON_BORDER], 0.45)
+		_:
+			return _style_texture("bouton_normal", [BOUTON_BACK, BOUTON_BORDER])
+
+# Bouton d'action neuf : chrome RÉEL de Christophe, style unique quelle que
+# soit l'action (le mockup ne distingue les actions que par leur texte — plus
+# d'accent par catégorie comme sur la peau intérimaire).
+static func bouton(texte: String, taille_police := 16, taille_min := Vector2(0, 46)) -> Button:
+	var b := Button.new()
+	b.text = texte
+	b.custom_minimum_size = taille_min
+	b.add_theme_font_override("font", ExpeStyle.police_mono())
+	b.add_theme_font_size_override("font_size", taille_police)
+	b.add_theme_color_override("font_color", UIColors.CYBER_TEXTE)
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_color_override("font_pressed_color", Color.WHITE)
+	b.add_theme_color_override("font_disabled_color", UIColors.CYBER_TEXTE_MUTED)
+	b.add_theme_stylebox_override("normal", _style_bouton("normal"))
+	b.add_theme_stylebox_override("hover", _style_bouton("survol"))
+	b.add_theme_stylebox_override("pressed", _style_bouton("presse"))
+	b.add_theme_stylebox_override("disabled", _style_bouton("desactive"))
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	return b
+
+# ─── Panneau de carte combattant ──────────────────────────────
+
+# `actif` pose le halo (Aura) — l'état « ciblable » (or) reste un OVERLAY
+# procédural posé par l'appelant (CarteCombattantCtb) : aucune texture or
+# n'a été livrée, et c'est un état de JEU (pas un habillage).
+static func style_panneau_carte(camp_joueur: bool, actif: bool) -> StyleBoxTexture:
+	var back: Texture2D = PANEL_BACK_HERO if camp_joueur else PANEL_BACK_ENNEMI
+	var border: Texture2D = PANEL_BORDER_HERO if camp_joueur else PANEL_BORDER_ENNEMI
+	var aura: Texture2D = PANEL_AURA_HERO if camp_joueur else PANEL_AURA_ENNEMI
+	var cle := "panel_%s_%s" % [str(camp_joueur), str(actif)]
+	var couches: Array = [back]
+	if actif:
+		couches.append(aura)
+	couches.append(border)
+	return _style_texture(cle, couches)
+
+# ─── Barre de PV ──────────────────────────────────────────────
+
+# TextureProgressBar : under/progress/over correspondent EXACTEMENT à
+# Back/Life/Border (mêmes dimensions sources) — pas de composition nécessaire.
+# Le remplissage (Life) reste NON teinté par la fraction de PV (choix DA de
+# Christophe, cf. mockups) : le texte "PV : x/y" garde l'info exacte, et la
+# couleur de la fraction bascule sur CE texte (CarteCombattantCtb._couleur_pv)
+# pour ne rien dégrader.
+static func barre_pv(camp_joueur: bool) -> TextureProgressBar:
+	var b := TextureProgressBar.new()
+	b.min_value = 0.0
+	b.max_value = 1.0
+	b.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
+	b.texture_under = HP_BACK
+	b.texture_progress = HP_LIFE
+	b.texture_over = HP_BORDER_HERO if camp_joueur else HP_BORDER_ENNEMI
+	b.custom_minimum_size = Vector2(0, 16)
+	return b
+
+# ─── Cadre de la file d'initiative ────────────────────────────
+
+static func style_chip_tour(camp_joueur: bool, en_tete: bool) -> StyleBoxTexture:
+	var border: Texture2D = TOUR_BORDER_HERO if camp_joueur else TOUR_BORDER_ENNEMI
+	var aura: Texture2D = TOUR_AURA_HERO if camp_joueur else TOUR_AURA_ENNEMI
+	var cle := "tour_%s_%s" % [str(camp_joueur), str(en_tete)]
+	var couches: Array = [TOUR_BACK]
+	if en_tete:
+		couches.append(aura)
+	couches.append(border)
+	return _style_texture(cle, couches)
+
+# ─── Curseur personnalisé ─────────────────────────────────────
+
+# Sans effet en tête headless (aucun DisplayServer réel) — évite un
+# avertissement inutile dans les suites de tests CI.
+static func installer_curseur() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	if _curseur_texture == null:
+		var img: Image = CURSEUR_SOURCE.get_image()
+		img.convert(Image.FORMAT_RGBA8)
+		img.resize(CURSEUR_TAILLE_PX, CURSEUR_TAILLE_PX, Image.INTERPOLATE_LANCZOS)
+		_curseur_texture = ImageTexture.create_from_image(img)
+	Input.set_custom_mouse_cursor(_curseur_texture, Input.CURSOR_ARROW, CURSEUR_HOTSPOT)
+
+static func retirer_curseur() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	Input.set_custom_mouse_cursor(null, Input.CURSOR_ARROW)
