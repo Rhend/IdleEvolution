@@ -310,7 +310,7 @@ static func construire(parent: Control, sol_y_frac: float, sol_x_frac: float,
 	decor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	decor._noeud_zoom = parent
 	decor._mask_material = ShaderMaterial.new()
-	decor._mask_material.shader = load(MASK_SHADER)
+	decor._mask_material.shader = AssetCache.charger(MASK_SHADER) as Shader
 	decor._split_tilt = bande_vs_px / maxf(vue.x, 1.0)
 	decor._mask_material.set_shader_parameter("split_tilt", decor._split_tilt)
 	# Hauteur NATURELLE (720, pas gonflée) : voir le commentaire de tête pour
@@ -351,9 +351,7 @@ func _batir(larg: float, haut: float, centre_x: float) -> void:
 	var idx_feu := 0
 	for plan in PLANS:
 		var chemin: String = DECOR_DIR + str(plan["f"])
-		if not ResourceLoader.exists(chemin):
-			continue
-		var texture: Texture2D = load(chemin)
+		var texture := AssetCache.charger(chemin) as Texture2D
 		if texture == null:
 			continue
 		if not cadre_pret:
@@ -428,9 +426,7 @@ func _batir(larg: float, haut: float, centre_x: float) -> void:
 # pré-multiplier comme pour le coude doublerait l'échelle.
 func _construire_enfant_bras(parent_sprite: Sprite2D, fichier: String) -> Sprite2D:
 	var chemin := DECOR_DIR + fichier
-	if not ResourceLoader.exists(chemin):
-		return null
-	var texture: Texture2D = load(chemin)
+	var texture := AssetCache.charger(chemin) as Texture2D
 	if texture == null:
 		return null
 	var sp := Sprite2D.new()

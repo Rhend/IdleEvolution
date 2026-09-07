@@ -226,6 +226,12 @@ func _traiter_combat() -> void:
 	if _chk_combat_auto.button_pressed:
 		run.combat_en_cours.derouler_auto()
 		return
+	# Écran de chargement (voir CombatLoadingScreen) : posé et laissé peindre
+	# AVANT la construction lourde de CombatCtbUi, sans quoi cet écran reste
+	# gelé pendant tout ce temps.
+	var chargement := CombatLoadingScreen.afficher(self)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	# Câblage récompenses/inventaire/consommation : fabrique partagée avec le
 	# jeu réel (CombatCtbUi.pour_run — un seul point de vérité).
 	_combat_ui = CombatCtbUi.pour_run(run, _combat_data,
@@ -233,6 +239,7 @@ func _traiter_combat() -> void:
 				_combat_ui = null
 				_rafraichir())
 	add_child(_combat_ui)
+	chargement.queue_free()
 
 func _rafraichir() -> void:
 	_carte_view.rafraichir()

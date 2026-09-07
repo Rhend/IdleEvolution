@@ -196,11 +196,18 @@ func _traiter_combat() -> void:
 	if combat_auto:
 		run.combat_en_cours.derouler_auto()
 		return
+	# Écran de chargement (voir CombatLoadingScreen) : posé et laissé peindre
+	# AVANT la construction lourde de CombatCtbUi, sans quoi cette carte reste
+	# gelée à l'écran pendant tout ce temps.
+	var chargement := CombatLoadingScreen.afficher(self)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	_combat_ui = CombatCtbUi.pour_run(run, _combat_data,
 			func() -> void:
 				_combat_ui = null
 				_rafraichir())
 	add_child(_combat_ui)
+	chargement.queue_free()
 
 # Annonce placeholder (texte flottant) du contenu d'un nœud résolu :
 # Bénédiction (vert), Piège (rouge), Coffre (or). Détail au journal.

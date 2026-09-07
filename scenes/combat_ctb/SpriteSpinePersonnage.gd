@@ -137,8 +137,8 @@ func _construire_spine(chemin_skel: String = CHEMIN_SKEL,
 		chemin_atlas: String = CHEMIN_ATLAS,
 		apparence: Dictionary = {},
 		hauteur_cible_px: float = HAUTEUR_ETALON_PX) -> bool:
-	var skel: Resource = load(chemin_skel)
-	var atlas: Resource = load(chemin_atlas)
+	var skel: Resource = AssetCache.charger(chemin_skel)
+	var atlas: Resource = AssetCache.charger(chemin_atlas)
 	if skel == null or atlas == null:
 		push_warning("SpriteSpinePersonnage : assets Spine illisibles (%s)" % chemin_skel)
 		return false

@@ -960,36 +960,9 @@ func _flotter(cb: CtbCombattant, texte: String, taille: int, couleur: Color,
 # reste au sommet de `_voile`) et retirés avec elle en fin d'intro — l'outro
 # (victoire/défaite) réutilise `_voile` SANS ce décor.
 func _intro() -> void:
-	var visuel := Control.new()
-	visuel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	visuel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var visuel := CombatUiSkin.splash_ennemi_detecte()
 	_voile.add_child(visuel)
 	_voile.move_child(visuel, 0)
-	for texture in [CombatUiSkin.INTRO_BACK, CombatUiSkin.INTRO_BACK_CYBER,
-			CombatUiSkin.INTRO_SPEAR]:
-		var couche := TextureRect.new()
-		couche.texture = texture
-		# EXPAND_IGNORE_SIZE : sans lui, le TextureRect garde la taille NATIVE
-		# de la texture (4770×2655) au lieu de suivre son rect — même piège
-		# déjà rencontré dans HoloTooltip.gd. STRETCH_SCALE (pas d'aspect)
-		# partout : les 3 calques partagent EXACTEMENT le même canevas source,
-		# un mode différent désalignerait les lances par rapport au circuit.
-		couche.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		couche.stretch_mode = TextureRect.STRETCH_SCALE
-		couche.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		couche.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		visuel.add_child(couche)
-	var glyphe := TextureRect.new()
-	glyphe.texture = CombatUiSkin.ICONE_ARTEFACT
-	glyphe.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	glyphe.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	glyphe.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	glyphe.set_anchors_preset(Control.PRESET_CENTER)
-	glyphe.offset_left = -90.0
-	glyphe.offset_top = -90.0
-	glyphe.offset_right = 90.0
-	glyphe.offset_bottom = 90.0
-	visuel.add_child(glyphe)
 
 	var titre := ExpeStyle.label_mono(Translations.T("ctb.combat_titre"), 34,
 			UIColors.CYBER_ACCENT)

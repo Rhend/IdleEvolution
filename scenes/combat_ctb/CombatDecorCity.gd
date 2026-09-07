@@ -162,11 +162,9 @@ static func construire(parent: Control, sol_y_frac: float, sol_x_frac: float,
 func _batir(larg: float, haut: float, centre_x: float) -> void:
 	for plan in PLANS:
 		var chemin: String = DECOR_DIR + str(plan["f"])
-		if not ResourceLoader.exists(chemin):
-			continue   # couche non livrée : on empile ce qui existe
-		var texture: Texture2D = load(chemin)
+		var texture := AssetCache.charger(chemin) as Texture2D
 		if texture == null:
-			continue
+			continue   # couche non livrée : on empile ce qui existe
 		var cadre := _cadre(texture.get_size(), larg, haut, bool(plan["reduit"]), centre_x)
 		var vitesse := float(plan["vitesse"])
 		# Assez de copies pour couvrir [0, larg] MÊME quand le ruban a glissé

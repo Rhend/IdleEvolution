@@ -73,6 +73,43 @@ const ICONE_ARTEFACT   := preload(DOSSIER_ICONES + "UI_Icone_Artefact.png")
 # ── Réticule de ciblage (remplace le "▼" ASCII dessiné en scène).
 const RETICULE := preload(DOSSIER_ICONES + "UI_Icone_Arrow_2.png")
 
+# Splash « ENNEMY DETECTED » (3 calques + glyphe), PARTAGÉ entre l'intro de
+# CombatCtbUi et l'écran de chargement affiché pendant sa construction
+# (CombatLoadingScreen, retour Rhend 07/09/2026 : le décor de ville parallaxé
+# + le sprite Spine du héros se montent en un bloc synchrone assez long pour
+# figer l'écran — ce splash y est déjà posé, poser le MÊME dès l'ouverture du
+# combat masque ce blocage au lieu de le laisser geler l'écran précédent) —
+# une seule source, jamais deux copies qui pourraient diverger.
+static func splash_ennemi_detecte() -> Control:
+	var visuel := Control.new()
+	visuel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	visuel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for texture in [INTRO_BACK, INTRO_BACK_CYBER, INTRO_SPEAR]:
+		var couche := TextureRect.new()
+		couche.texture = texture
+		# EXPAND_IGNORE_SIZE : sans lui, le TextureRect garde la taille NATIVE
+		# de la texture (4770×2655) au lieu de suivre son rect. STRETCH_SCALE
+		# (pas d'aspect) partout : les 3 calques partagent EXACTEMENT le même
+		# canevas source, un mode différent désalignerait les lances par
+		# rapport au circuit.
+		couche.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		couche.stretch_mode = TextureRect.STRETCH_SCALE
+		couche.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		couche.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		visuel.add_child(couche)
+	var glyphe := TextureRect.new()
+	glyphe.texture = ICONE_ARTEFACT
+	glyphe.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glyphe.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	glyphe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glyphe.set_anchors_preset(Control.PRESET_CENTER)
+	glyphe.offset_left = -90.0
+	glyphe.offset_top = -90.0
+	glyphe.offset_right = 90.0
+	glyphe.offset_bottom = 90.0
+	visuel.add_child(glyphe)
+	return visuel
+
 # ── Curseur personnalisé (source 1032×1032 — Godot plafonne un curseur à
 # 256×256 ; redimensionné une fois, en cache).
 const CURSEUR_SOURCE := preload("res://assets/ui/UI_Cursor.png")
